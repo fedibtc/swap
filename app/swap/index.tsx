@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import Send from "./send";
-import Receive from "./receive";
+// import Send from "./send";
+// import Receive from "./receive";
 import { Token, tokens } from "@/lib/constants";
 import { Status, statuses } from "../types";
-import { useQuery } from "@tanstack/react-query";
 import {
   Select,
   SelectItem,
@@ -36,31 +35,31 @@ export default function Swap() {
   } | null>(null);
   const [status, setStatus] = useState(Status.NEW);
 
-  const { data } = useQuery<Rate>({
-    queryKey: ["prices", { tab, token }],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/rate?from=${tab === "send" ? "BTC" : token}&to=${
-          tab === "send" ? token : "BTC"
-        }`,
-      )
-        .then((r) => r.json())
-        .catch((err) => {
-          throw new Error(err);
-        });
-
-      if (!res) {
-        throw new Error("Could not fetch rates from fixedfloat.");
-      }
-
-      if (res.error) {
-        throw new Error(res.error);
-      }
-
-      return res.data;
-    },
-    refetchInterval: 10000,
-  });
+  // const { data } = useQuery<Rate>({
+  //   queryKey: ["prices", { tab, token }],
+  //   queryFn: async () => {
+  //     const res = await fetch(
+  //       `/api/rate?from=${tab === "send" ? "BTC" : token}&to=${
+  //         tab === "send" ? token : "BTC"
+  //       }`,
+  //     )
+  //       .then((r) => r.json())
+  //       .catch((err) => {
+  //         throw new Error(err);
+  //       });
+  //
+  //     if (!res) {
+  //       throw new Error("Could not fetch rates from fixedfloat.");
+  //     }
+  //
+  //     if (res.error) {
+  //       throw new Error(res.error);
+  //     }
+  //
+  //     return res.data;
+  //   },
+  //   refetchInterval: 10000,
+  // });
 
   useEffect(() => {
     if (order) {
@@ -143,11 +142,11 @@ export default function Swap() {
         </Select>
       </div>
 
-      {tab === "send" ? (
+      {/*tab === "send" ? (
         <Send rate={data} setOrder={setOrder} token={token} />
       ) : (
         <Receive rate={data} setOrder={setOrder} token={token} />
-      )}
+      )*/}
 
       {order ? (
         <div className="flex flex-col gap-2 justify-center mt-8 w-full">

@@ -8,12 +8,11 @@ import {
   Dialog,
   Icon,
   Scanner,
-  useWebLN,
+  useFediInjection,
 } from "@fedibtc/ui";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
 import { Token } from "@/lib/constants";
 import { Form, FormField, FormItem, FormLabel } from "@/components/ui/form";
 
@@ -34,7 +33,7 @@ export default function Send({
   const [scanning, setScanning] = useState(false);
   const toast = useToast();
 
-  const webln = useWebLN();
+  const { webln } = useFediInjection()
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
@@ -43,53 +42,53 @@ export default function Send({
     },
   });
 
-  const mutation = useMutation({
-    mutationFn: async (fields: z.infer<typeof FormSchema>) => {
-      const { data, error } = await fetch("/api/send", {
-        method: "POST",
-        body: JSON.stringify({
-          to: token,
-          amount: fields.amount / 100000000,
-          address: fields.address,
-        }),
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      }).then((r) => r.json());
-
-      if (error) {
-        toast.error(error);
-
-        return;
-      }
-
-      if (data?.id) {
-        setOrder({
-          id: data.id,
-          token: data.token,
-        });
-      }
-
-      try {
-        const { preimage } = await webln.sendPayment(data.invoice);
-
-        if (preimage) {
-          toast.show({
-            content: "Payment sent",
-            status: "success",
-          });
-        } else {
-          toast.show({
-            content: "The payment failed to go through",
-            status: "error",
-          });
-        }
-      } catch (err) {
-        toast.error(err);
-      }
-    },
-  });
+  // const mutation = useMutation({
+  //   mutationFn: async (fields: z.infer<typeof FormSchema>) => {
+  //     const { data, error } = await fetch("/api/send", {
+  //       method: "POST",
+  //       body: JSON.stringify({
+  //         to: token,
+  //         amount: fields.amount / 100000000,
+  //         address: fields.address,
+  //       }),
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //         Accept: "application/json",
+  //       },
+  //     }).then((r) => r.json());
+  //
+  //     if (error) {
+  //       toast.error(error);
+  //
+  //       return;
+  //     }
+  //
+  //     if (data?.id) {
+  //       setOrder({
+  //         id: data.id,
+  //         token: data.token,
+  //       });
+  //     }
+  //
+  //     try {
+  //       const { preimage } = await webln.sendPayment(data.invoice);
+  //
+  //       if (preimage) {
+  //         toast.show({
+  //           content: "Payment sent",
+  //           status: "success",
+  //         });
+  //       } else {
+  //         toast.show({
+  //           content: "The payment failed to go through",
+  //           status: "error",
+  //         });
+  //       }
+  //     } catch (err) {
+  //       toast.error(err);
+  //     }
+  //   },
+  // });
 
   useEffect(() => {
     if (rate?.from.min && typeof rate.from.min === "number") {
@@ -101,7 +100,7 @@ export default function Send({
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
+        // onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
         className="flex flex-col gap-4 w-full grow items-stretch"
       >
         <FormField
@@ -167,7 +166,7 @@ export default function Send({
 
         <div className="grow" />
 
-        <Button loading={mutation.status === "pending"}>Submit</Button>
+        <Button loading={false}>Submit</Button>
       </form>
     </Form>
   );

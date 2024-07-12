@@ -9,7 +9,7 @@ import {
   Button,
   Checkbox,
   Input,
-  useWebLN,
+  useFediInjection,
 } from "@fedibtc/ui";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,7 +35,7 @@ export default function Receive({
   const [open, setOpen] = useState(false);
   const [invoiceUri, setInvoiceUri] = useState(false);
 
-  const webln = useWebLN();
+  const { webln } = useFediInjection();
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
