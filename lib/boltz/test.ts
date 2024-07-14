@@ -74,8 +74,8 @@ async function testChainSwapLQD2BTC() {
 }
 
 async function testAll() {
-  await testReverseSwap();
-  // await testSubmarineSwap();
+  // await testReverseSwap();
+  await testSubmarineSwap();
   // await testChainSwapBTC2LQD();
   // await testChainSwapLQD2BTC();
 }

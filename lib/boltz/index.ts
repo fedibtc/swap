@@ -1,8 +1,14 @@
-import BoltzBase from "./BoltzBase";
+import BoltzBase, { SwapType } from "./BoltzBase";
 import SubmarineSwap from "./SubmarineSwap";
 import ReverseSwap from "./ReverseSwap";
 import ChainSwap from "./ChainSwap";
 import { networks } from "bitcoinjs-lib";
+import {
+  ChainSwapResponse,
+  ReverseSwapResponse,
+  SubmarineSwapResponse,
+} from "./types";
+import WebSocket from "ws";
 
 export enum NetworkType {
   Mainnet = "mainnet",
@@ -48,31 +54,56 @@ export default class Boltz extends BoltzBase {
     }
   }
 
+  public createAndSubscribeToWebSocket(
+    swapId: string,
+    swapType: SwapType
+  ): WebSocket {
+    const webSocket = super.createAndSubscribeToWebSocket(swapId, swapType);
+
+    let handlers;
+    switch (swapType) {
+      case SwapType.Submarine:
+        handlers = this.submarineSwap.getWebSocketHandlers();
+        break;
+      case SwapType.Reverse:
+        handlers = this.reverseSwap.getWebSocketHandlers();
+        break;
+      case SwapType.Chain:
+        handlers = this.chainSwap.getWebSocketHandlers();
+        break;
+      default:
+        throw new Error(`Unsupported swap type: ${swapType}`);
+    }
+
+    this.handleWebSocketMessage(webSocket, handlers);
+    return webSocket;
+  }
+
   public async createSubmarineSwap(
     invoice: string,
     refundAddress: string
-  ): Promise<void> {
+  ): Promise<SubmarineSwapResponse> {
     return this.submarineSwap.submarineSwap(invoice, refundAddress);
   }
 
   public async createReverseSwap(
     amount: number,
     destinationAddress: string
-  ): Promise<void> {
+  ): Promise<ReverseSwapResponse> {
     return this.reverseSwap.reverseSwap(amount, destinationAddress);
   }
 
   public async createChainSwapBTC2LQD(
     amount: number,
     destinationAddress: string
-  ): Promise<void> {
+  ): Promise<ChainSwapResponse> {
     return this.chainSwap.chainSwapBTC2LQD(amount, destinationAddress);
   }
 
   public async createChainSwapLQD2BTC(
     amount: number,
     destinationAddress: string
-  ): Promise<void> {
+  ): Promise<ChainSwapResponse> {
     return this.chainSwap.chainSwapLQD2BTC(amount, destinationAddress);
   }
 }

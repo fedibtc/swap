@@ -6,6 +6,7 @@ import { crypto } from "bitcoinjs-lib";
 import { Musig, SwapTreeSerializer, TaprootUtils } from "boltz-core";
 import { randomBytes } from "crypto";
 import zkpInit from "@vulpemventures/secp256k1-zkp";
+import { SubmarineSwapResponse } from "./types";
 
 /**
  * Submarine Swap Flow (Lightning -> Onchain):
@@ -19,10 +20,10 @@ export default class SubmarineSwap extends Boltz {
   public async submarineSwap(
     invoice: string,
     refundAddress: string
-  ): Promise<void> {
+  ): Promise<SubmarineSwapResponse> {
     const keys = ECPairFactory(ecc).makeRandom();
 
-    const createdResponse = await this.fetch<any, any>(
+    const createdResponse: SubmarineSwapResponse = await this.fetch<any, any>(
       "/swap/submarine",
       "POST",
       {
@@ -33,27 +34,24 @@ export default class SubmarineSwap extends Boltz {
       }
     );
 
-    console.log("Submarine swap created successfully:", createdResponse.id);
-    console.log("Swap details:");
-    console.log("- Invoice:", createdResponse.invoice);
-    console.log("- Onchain amount:", createdResponse.onchainAmount, "satoshis");
-    console.log("- Lockup address:", createdResponse.lockupAddress);
-    console.log("Please pay the invoice to proceed with the swap.");
+    console.log("Submarine swap created successfully:", createdResponse);
 
-    const webSocket = this.createAndSubscribeToWebSocket(createdResponse.id);
+    return createdResponse;
 
-    this.handleWebSocketMessage(webSocket, {
-      "invoice.set": async () => {
-        console.log("Waiting for onchain transaction");
-      },
-      "transaction.claim.pending": async () => {
-        await this.handleSubmarineClaimPending(createdResponse, keys, invoice);
-      },
-      "transaction.claimed": async () => {
-        console.log("Swap successful");
-        webSocket.close();
-      },
-    });
+    // const webSocket = this.createAndSubscribeToWebSocket(createdResponse.id);
+
+    // this.handleWebSocketMessage(webSocket, {
+    //   "invoice.set": async () => {
+    //     console.log("Waiting for onchain transaction");
+    //   },
+    //   "transaction.claim.pending": async () => {
+    //     await this.handleSubmarineClaimPending(createdResponse, keys, invoice);
+    //   },
+    //   "transaction.claimed": async () => {
+    //     console.log("Swap successful");
+    //     webSocket.close();
+    //   },
+    // });
   }
 
   /**

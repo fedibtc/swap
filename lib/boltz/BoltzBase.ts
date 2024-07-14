@@ -3,6 +3,12 @@ import { networks, initEccLib } from "bitcoinjs-lib";
 import * as ecc from "tiny-secp256k1";
 import WebSocket from "ws";
 
+export enum SwapType {
+  Submarine = "submarine",
+  Reverse = "reverse",
+  Chain = "chain",
+}
+
 export default class BoltzBase {
   protected endpoint: string;
   protected wsEndpoint: string;
@@ -32,7 +38,10 @@ export default class BoltzBase {
     return response.data;
   }
 
-  protected createAndSubscribeToWebSocket(swapId: string): WebSocket {
+  protected createAndSubscribeToWebSocket(
+    swapId: string,
+    swapType: SwapType
+  ): WebSocket {
     const webSocket = new WebSocket(this.wsEndpoint);
     webSocket.on("open", () => {
       webSocket.send(

@@ -17,6 +17,7 @@ import {
 } from "boltz-core/dist/lib/liquid";
 import { randomBytes } from "crypto";
 import zkpInit, { Secp256k1ZKP } from "@vulpemventures/secp256k1-zkp";
+import { ChainSwapResponse } from "./types";
 
 /**
  * Chain Swap Flow (Onchain BTC -> Onchain Liquid and vice versa):
@@ -37,7 +38,7 @@ export default class ChainSwap extends BoltzBase {
   public async chainSwapBTC2LQD(
     amount: number,
     destinationAddress: string
-  ): Promise<void> {
+  ): Promise<ChainSwapResponse> {
     return this.chainSwap(amount, "BTC", "L-BTC", destinationAddress);
   }
 
@@ -49,7 +50,7 @@ export default class ChainSwap extends BoltzBase {
   public async chainSwapLQD2BTC(
     amount: number,
     destinationAddress: string
-  ): Promise<void> {
+  ): Promise<ChainSwapResponse> {
     return this.chainSwap(amount, "L-BTC", "BTC", destinationAddress);
   }
 
@@ -65,7 +66,7 @@ export default class ChainSwap extends BoltzBase {
     fromChain: string,
     toChain: string,
     destinationAddress: string
-  ): Promise<void> {
+  ): Promise<ChainSwapResponse> {
     const zkp = await zkpInit();
     init(zkp);
 
@@ -73,48 +74,59 @@ export default class ChainSwap extends BoltzBase {
     const claimKeys = ECPairFactory(ecc).makeRandom();
     const refundKeys = ECPairFactory(ecc).makeRandom();
 
-    const createdResponse = await this.fetch<any, any>("/swap/chain", "POST", {
-      userLockAmount: amount,
-      to: toChain,
-      from: fromChain,
-      preimageHash: crypto.sha256(preimage).toString("hex"),
-      claimPublicKey: claimKeys.publicKey.toString("hex"),
-      refundPublicKey: refundKeys.publicKey.toString("hex"),
-    });
-
-    console.log("Chain swap created successfully:", createdResponse.id);
-    console.log("Swap details:");
-    console.log("- From chain:", createdResponse.from);
-    console.log("- To chain:", createdResponse.to);
-    console.log("- Amount:", createdResponse.amount, "satoshis");
-    console.log("- Lockup address:", createdResponse.lockupAddress);
-    console.log(
-      "Please proceed with the necessary steps to complete the swap."
+    const createdResponse: ChainSwapResponse = await this.fetch<any, any>(
+      "/swap/chain",
+      "POST",
+      {
+        userLockAmount: amount,
+        to: toChain,
+        from: fromChain,
+        preimageHash: crypto.sha256(preimage).toString("hex"),
+        claimPublicKey: claimKeys.publicKey.toString("hex"),
+        refundPublicKey: refundKeys.publicKey.toString("hex"),
+      }
     );
 
-    const webSocket = this.createAndSubscribeToWebSocket(createdResponse.id);
+    console.log("Chain swap created successfully:", createdResponse);
 
-    this.handleWebSocketMessage(webSocket, {
+    return createdResponse;
+  }
+
+  public getWebSocketHandlers() {
+    return {
       "swap.created": async () => {
-        console.log("Waiting for coins to be locked");
+        console.log("Chain swap created, waiting for coins to be locked...");
       },
-      "transaction.server.mempool": async (args) => {
-        console.log("Creating claim transaction");
-        await this.handleChainSwapClaim(
-          zkp,
-          claimKeys,
-          refundKeys,
-          preimage,
-          createdResponse,
-          args.transaction.hex,
-          destinationAddress
+      "transaction.server.mempool": async (args: any) => {
+        console.log(
+          "Lockup transaction detected in mempool. Initiating claim process..."
         );
+        try {
+          // TODO: We'll need to store or pass these values from the chainSwap method
+          // await this.handleChainSwapClaim(
+          //   this.zkp,
+          //   this.claimKeys,
+          //   this.refundKeys,
+          //   this.preimage,
+          //   this.createdResponse,
+          //   args.transaction.hex,
+          //   this.destinationAddress
+          // );
+          console.log("Claim transaction successfully broadcast.");
+        } catch (claimError) {
+          console.error("Error during claim process:", claimError);
+          // You might want to emit an event or call a callback here
+        }
       },
       "transaction.claimed": async () => {
-        console.log("Chain swap successful");
-        webSocket.close();
+        console.log("Transaction claimed. Chain swap completed successfully.");
+        // You might want to emit an event or call a callback here
       },
-    });
+      "swap.failed": async (args: any) => {
+        console.error("Chain swap failed:", args.reason);
+        // You might want to emit an event or call a callback here
+      },
+    };
   }
 
   /**

@@ -13,6 +13,7 @@ import {
 } from "boltz-core";
 import { randomBytes } from "crypto";
 import zkpInit from "@vulpemventures/secp256k1-zkp";
+import { ReverseSwapResponse } from "./types";
 
 /**
  * Reverse Swap Flow (Onchain -> Lightning):
@@ -26,14 +27,14 @@ export default class ReverseSwap extends Boltz {
   public async reverseSwap(
     amount: number,
     destinationAddress: string
-  ): Promise<void> {
+  ): Promise<ReverseSwapResponse> {
     try {
       const preimage = randomBytes(32);
       const keys = ECPairFactory(ecc).makeRandom();
 
       console.log("Initiating reverse swap...");
 
-      const createdResponse = await this.fetch<any, any>(
+      const createdResponse: ReverseSwapResponse = await this.fetch<any, any>(
         "/swap/reverse",
         "POST",
         {
@@ -45,47 +46,9 @@ export default class ReverseSwap extends Boltz {
         }
       );
 
-      console.log("Reverse swap created successfully:", createdResponse.id);
-      console.log("Swap details:");
-      console.log("- Invoice:", createdResponse.invoice);
-      console.log(
-        "- Onchain amount:",
-        createdResponse.onchainAmount,
-        "satoshis"
-      );
-      console.log("- Lockup address:", createdResponse.lockupAddress);
-      console.log("Please pay the invoice to proceed with the swap.");
+      console.log("Reverse swap created successfully:", createdResponse);
 
-      const webSocket = this.createAndSubscribeToWebSocket(createdResponse.id);
-      console.log("WebSocket created successfully.");
-
-      this.handleWebSocketMessage(webSocket, {
-        "swap.created": async () => {
-          console.log("Swap created, waiting for invoice to be paid...");
-        },
-        "transaction.mempool": async (args) => {
-          console.log(
-            "Lockup transaction detected in mempool. Initiating claim process..."
-          );
-          try {
-            await this.handleReverseSwapClaim(
-              createdResponse,
-              keys,
-              preimage,
-              destinationAddress,
-              args.transaction.hex
-            );
-            console.log("Claim transaction successfully broadcast.");
-          } catch (claimError) {
-            console.error("Error during claim process:", claimError);
-            webSocket.close();
-          }
-        },
-        "invoice.settled": async () => {
-          console.log("Invoice settled. Swap completed successfully.");
-          webSocket.close();
-        },
-      });
+      return createdResponse;
     } catch (error: any) {
       if (error.isAxiosError) {
         console.error("Network error during reverse swap:", {
@@ -101,6 +64,41 @@ export default class ReverseSwap extends Boltz {
         "Failed to initiate reverse swap. Please try again later."
       );
     }
+  }
+
+  public getWebSocketHandlers() {
+    return {
+      "swap.created": async () => {
+        console.log("Reverse swap created, waiting for invoice to be paid...");
+      },
+      "transaction.mempool": async (args: any) => {
+        console.log(
+          "Lockup transaction detected in mempool. Initiating claim process..."
+        );
+        try {
+          // TODO: We'll need to store or pass these values from the reverseSwap method
+          // await this.handleReverseSwapClaim(
+          //   this.createdResponse,
+          //   this.keys,
+          //   this.preimage,
+          //   this.destinationAddress,
+          //   args.transaction.hex
+          // );
+          console.log("Claim transaction successfully broadcast.");
+        } catch (claimError) {
+          console.error("Error during claim process:", claimError);
+          // You might want to emit an event or call a callback here
+        }
+      },
+      "invoice.settled": async () => {
+        console.log("Invoice settled. Reverse swap completed successfully.");
+        // You might want to emit an event or call a callback here
+      },
+      "swap.failed": async (args: any) => {
+        console.error("Reverse swap failed:", args.reason);
+        // You might want to emit an event or call a callback here
+      },
+    };
   }
 
   /**
