@@ -1,3 +1,15 @@
+export enum NetworkType {
+  Mainnet = "mainnet",
+  Testnet = "testnet",
+  Regtest = "regtest",
+}
+
+export enum SwapType {
+  Submarine = "submarine",
+  Reverse = "reverse",
+  Chain = "chain",
+}
+
 export interface SwapResponse {
   id: string;
 }

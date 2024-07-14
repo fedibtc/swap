@@ -2,12 +2,7 @@ import axios from "axios";
 import { networks, initEccLib } from "bitcoinjs-lib";
 import * as ecc from "tiny-secp256k1";
 import WebSocket from "ws";
-
-export enum SwapType {
-  Submarine = "submarine",
-  Reverse = "reverse",
-  Chain = "chain",
-}
+import { SwapType } from "./types";
 
 export default class BoltzBase {
   protected endpoint: string;

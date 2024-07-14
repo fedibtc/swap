@@ -1,21 +1,17 @@
-import BoltzBase, { SwapType } from "./BoltzBase";
+import BoltzBase from "./BoltzBase";
 import SubmarineSwap from "./SubmarineSwap";
 import ReverseSwap from "./ReverseSwap";
 import ChainSwap from "./ChainSwap";
 import { networks } from "bitcoinjs-lib";
 import {
   ChainSwapResponse,
+  NetworkType,
   ReverseSwapResponse,
   SubmarineSwapResponse,
   SwapOutcome,
+  SwapType,
 } from "./types";
 import WebSocket from "ws";
-
-export enum NetworkType {
-  Mainnet = "mainnet",
-  Testnet = "testnet",
-  Regtest = "regtest",
-}
 
 export default class Boltz extends BoltzBase {
   private submarineSwap: SubmarineSwap;
