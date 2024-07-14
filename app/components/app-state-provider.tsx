@@ -1,19 +1,22 @@
 "use client";
 
-import { CreateData, Currency } from "@/lib/ff/types";
-import { createContext, useContext, useState } from "react";
+import { CreateData, Currency, PriceData } from "@/lib/ff/types";
+import { createContext, useContext, useEffect, useState } from "react";
+import { getRate } from "../actions/get-rate";
 
 interface AppState {
   direction: Direction;
   currencies: Array<Currency>;
-  altcoin: string;
+  rate: PriceData;
+  isRateLoading: boolean;
+  coin: string;
   exchangeOrder: CreateData | null;
   screen: AppScreen;
 }
 
 export enum Direction {
-  FromLighting,
-  ToLighting,
+  FromLightning,
+  ToLightning,
 }
 
 export enum AppScreen {
@@ -29,11 +32,21 @@ export const AppStateContext = createContext<
   | null
 >(null);
 
-export function AppStateProvider({ children, currencies }: { children: React.ReactNode, currencies: Array<Currency> }) {
+export function AppStateProvider({
+  children,
+  currencies,
+  rate,
+}: {
+  children: React.ReactNode;
+  currencies: Array<Currency>;
+  rate: PriceData;
+}) {
   const [value, setValue] = useState<AppState>({
-    direction: Direction.ToLighting,
+    direction: Direction.FromLightning,
     currencies,
-    altcoin: "USDCETH",
+    rate,
+    coin: "BTC",
+    isRateLoading: false,
     exchangeOrder: null,
     screen: AppScreen.Home,
   });
@@ -45,6 +58,18 @@ export function AppStateProvider({ children, currencies }: { children: React.Rea
     }));
   };
 
+  useEffect(() => {
+    async function updateRate() {
+      update({ isRateLoading: true })
+      const rate = value.direction === Direction.FromLightning ? await getRate("BTCLN", value.coin) : await getRate(value.coin, "BTCLN")
+
+      update({ rate })
+      update({ isRateLoading: false })
+    } 
+
+    updateRate()
+  }, [value.direction, value.coin])
+
   return (
     <AppStateContext.Provider value={{ ...value, update }}>
       {children}
@@ -53,11 +78,11 @@ export function AppStateProvider({ children, currencies }: { children: React.Rea
 }
 
 export function useAppState() {
-  const context = useContext(AppStateContext)
+  const context = useContext(AppStateContext);
 
-  if(context === null) {
-    throw new Error("useAppState() must be used within an AppStateProvider")
+  if (context === null) {
+    throw new Error("useAppState() must be used within an AppStateProvider");
   }
 
-  return context
+  return context;
 }

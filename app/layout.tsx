@@ -5,9 +5,10 @@ import { Albert_Sans } from "next/font/google";
 import Fallback from "./components/fallback";
 import "./globals.css";
 import { AppStateProvider } from "./components/app-state-provider";
-import FixedFloat from "@/lib/ff";
+import { fixedFloat } from "@/lib/ff";
 import { Suspense } from "react";
 import Container from "@/components/container";
+import { getRate } from "./actions/get-rate";
 
 const albertSans = Albert_Sans({ subsets: ["latin"] });
 
@@ -66,11 +67,10 @@ export default function RootLayout({
 }
 
 async function LoadedCurrencies({ children }: { children: React.ReactNode }) {
-  const ff = new FixedFloat(process.env.FF_API_KEY, process.env.FF_API_SECRET);
-
-  const currencies = await ff.currencies();
+  const currencies = await fixedFloat.currencies();
+  const rate = await getRate("BTCLN", "BTC")
 
   return (
-    <AppStateProvider currencies={currencies.data}>{children}</AppStateProvider>
+    <AppStateProvider currencies={currencies.data} rate={rate}>{children}</AppStateProvider>
   );
 }
