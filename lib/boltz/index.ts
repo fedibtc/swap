@@ -57,7 +57,7 @@ export default class Boltz extends BoltzBase {
   ): Promise<SwapOutcome> {
     return new Promise((resolve, reject) => {
       const webSocket = super.createAndSubscribeToWebSocket(swapId, swapType);
-
+      console.log("WebSocket created and subscribed to swap ID:", swapId);
       let handlers;
       switch (swapType) {
         case SwapType.Submarine:
@@ -76,9 +76,11 @@ export default class Boltz extends BoltzBase {
 
       const handleMessage = (message: WebSocket.Data) => {
         const parsedMessage = JSON.parse(message.toString());
+        console.log("Received message:", parsedMessage);
         if (parsedMessage.type === "swap.update") {
           const outcome = handlers.handleSwapUpdate(parsedMessage);
           if (outcome) {
+            console.log("Swap outcome:", outcome);
             webSocket.close();
             resolve(outcome);
           }
