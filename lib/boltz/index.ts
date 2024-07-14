@@ -4,14 +4,18 @@ import ReverseSwap from "./ReverseSwap";
 import ChainSwap from "./ChainSwap";
 import { networks } from "bitcoinjs-lib";
 
-type NetworkType = "mainnet" | "testnet" | "regtest";
+export enum NetworkType {
+  Mainnet = "mainnet",
+  Testnet = "testnet",
+  Regtest = "regtest",
+}
 
 export default class Boltz extends BoltzBase {
   private submarineSwap: SubmarineSwap;
   private reverseSwap: ReverseSwap;
   private chainSwap: ChainSwap;
 
-  constructor(networkType: NetworkType = "mainnet") {
+  constructor(networkType: NetworkType = NetworkType.Mainnet) {
     const { endpoint, wsEndpoint, network } =
       Boltz.getNetworkConfig(networkType);
     super(endpoint, wsEndpoint, network);
@@ -22,19 +26,19 @@ export default class Boltz extends BoltzBase {
 
   private static getNetworkConfig(networkType: NetworkType) {
     switch (networkType) {
-      case "testnet":
+      case NetworkType.Testnet:
         return {
           endpoint: "https://api.testnet.boltz.exchange/v2",
           wsEndpoint: "wss://api.testnet.boltz.exchange/v2/ws",
           network: networks.testnet,
         };
-      case "regtest":
+      case NetworkType.Regtest:
         return {
           endpoint: "http://127.0.0.1:9001/v2",
           wsEndpoint: "ws://127.0.0.1:9001/v2/ws",
           network: networks.regtest,
         };
-      case "mainnet":
+      case NetworkType.Mainnet:
       default:
         return {
           endpoint: "https://api.boltz.exchange/v2",

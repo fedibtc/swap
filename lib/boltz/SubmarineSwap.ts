@@ -23,7 +23,7 @@ export default class SubmarineSwap extends Boltz {
     const keys = ECPairFactory(ecc).makeRandom();
 
     const createdResponse = await this.fetch<any, any>(
-      "/v2/swap/submarine",
+      "/swap/submarine",
       "POST",
       {
         invoice,
@@ -33,7 +33,12 @@ export default class SubmarineSwap extends Boltz {
       }
     );
 
-    console.log("Created swap:", createdResponse);
+    console.log("Submarine swap created successfully:", createdResponse.id);
+    console.log("Swap details:");
+    console.log("- Invoice:", createdResponse.invoice);
+    console.log("- Onchain amount:", createdResponse.onchainAmount, "satoshis");
+    console.log("- Lockup address:", createdResponse.lockupAddress);
+    console.log("Please pay the invoice to proceed with the swap.");
 
     const webSocket = this.createAndSubscribeToWebSocket(createdResponse.id);
 
@@ -65,7 +70,7 @@ export default class SubmarineSwap extends Boltz {
     console.log("Creating cooperative claim transaction");
 
     const claimTxDetails = await this.fetch<{}, any>(
-      `/v2/swap/submarine/${createdResponse.id}/claim`,
+      `/swap/submarine/${createdResponse.id}/claim`,
       "GET"
     );
 
@@ -99,7 +104,7 @@ export default class SubmarineSwap extends Boltz {
     ]);
     musig.initializeSession(Buffer.from(claimTxDetails.transactionHash, "hex"));
 
-    await this.fetch(`/v2/swap/submarine/${createdResponse.id}/claim`, "POST", {
+    await this.fetch(`/swap/submarine/${createdResponse.id}/claim`, "POST", {
       pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
       partialSignature: Buffer.from(musig.signPartial()).toString("hex"),
     });

@@ -27,43 +27,79 @@ export default class ReverseSwap extends Boltz {
     amount: number,
     destinationAddress: string
   ): Promise<void> {
-    const preimage = randomBytes(32);
-    const keys = ECPairFactory(ecc).makeRandom();
+    try {
+      const preimage = randomBytes(32);
+      const keys = ECPairFactory(ecc).makeRandom();
 
-    const createdResponse = await this.fetch<any, any>(
-      "/v2/swap/reverse",
-      "POST",
-      {
-        invoiceAmount: amount,
-        to: "BTC",
-        from: "BTC",
-        claimPublicKey: keys.publicKey.toString("hex"),
-        preimageHash: crypto.sha256(preimage).toString("hex"),
+      console.log("Initiating reverse swap...");
+
+      const createdResponse = await this.fetch<any, any>(
+        "/swap/reverse",
+        "POST",
+        {
+          invoiceAmount: amount,
+          to: "BTC",
+          from: "BTC",
+          claimPublicKey: keys.publicKey.toString("hex"),
+          preimageHash: crypto.sha256(preimage).toString("hex"),
+        }
+      );
+
+      console.log("Reverse swap created successfully:", createdResponse.id);
+      console.log("Swap details:");
+      console.log("- Invoice:", createdResponse.invoice);
+      console.log(
+        "- Onchain amount:",
+        createdResponse.onchainAmount,
+        "satoshis"
+      );
+      console.log("- Lockup address:", createdResponse.lockupAddress);
+      console.log("Please pay the invoice to proceed with the swap.");
+
+      const webSocket = this.createAndSubscribeToWebSocket(createdResponse.id);
+
+      this.handleWebSocketMessage(webSocket, {
+        "swap.created": async () => {
+          console.log("Swap created, waiting for invoice to be paid...");
+        },
+        "transaction.mempool": async (args) => {
+          console.log(
+            "Lockup transaction detected in mempool. Initiating claim process..."
+          );
+          try {
+            await this.handleReverseSwapClaim(
+              createdResponse,
+              keys,
+              preimage,
+              destinationAddress,
+              args.transaction.hex
+            );
+            console.log("Claim transaction successfully broadcast.");
+          } catch (claimError) {
+            console.error("Error during claim process:", claimError);
+            webSocket.close();
+          }
+        },
+        "invoice.settled": async () => {
+          console.log("Invoice settled. Swap completed successfully.");
+          webSocket.close();
+        },
+      });
+    } catch (error: any) {
+      if (error.isAxiosError) {
+        console.error("Network error during reverse swap:", {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: error.config?.url,
+        });
+      } else {
+        console.error("Unexpected error during reverse swap:", error);
       }
-    );
-
-    console.log("Created reverse swap:", createdResponse);
-
-    const webSocket = this.createAndSubscribeToWebSocket(createdResponse.id);
-
-    this.handleWebSocketMessage(webSocket, {
-      "swap.created": async () => {
-        console.log("Waiting for invoice to be paid");
-      },
-      "transaction.mempool": async (args) => {
-        await this.handleReverseSwapClaim(
-          createdResponse,
-          keys,
-          preimage,
-          destinationAddress,
-          args.transaction.hex
-        );
-      },
-      "invoice.settled": async () => {
-        console.log("Swap successful");
-        webSocket.close();
-      },
-    });
+      throw new Error(
+        "Failed to initiate reverse swap. Please try again later."
+      );
+    }
   }
 
   /**
@@ -116,7 +152,7 @@ export default class ReverseSwap extends Boltz {
     );
 
     const boltzSig = await this.fetch<any, any>(
-      `/v2/swap/reverse/${createdResponse.id}/claim`,
+      `/swap/reverse/${createdResponse.id}/claim`,
       "POST",
       {
         index: 0,
@@ -147,7 +183,7 @@ export default class ReverseSwap extends Boltz {
     claimTx.ins[0].witness = [musig.aggregatePartials()];
 
     await this.fetch<{ hex: string }, { txid: string }>(
-      "/v2/chain/BTC/transaction",
+      "/chain/BTC/transaction",
       "POST",
       { hex: claimTx.toHex() }
     );

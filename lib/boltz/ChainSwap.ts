@@ -73,20 +73,24 @@ export default class ChainSwap extends BoltzBase {
     const claimKeys = ECPairFactory(ecc).makeRandom();
     const refundKeys = ECPairFactory(ecc).makeRandom();
 
-    const createdResponse = await this.fetch<any, any>(
-      "/v2/swap/chain",
-      "POST",
-      {
-        userLockAmount: amount,
-        to: toChain,
-        from: fromChain,
-        preimageHash: crypto.sha256(preimage).toString("hex"),
-        claimPublicKey: claimKeys.publicKey.toString("hex"),
-        refundPublicKey: refundKeys.publicKey.toString("hex"),
-      }
-    );
+    const createdResponse = await this.fetch<any, any>("/swap/chain", "POST", {
+      userLockAmount: amount,
+      to: toChain,
+      from: fromChain,
+      preimageHash: crypto.sha256(preimage).toString("hex"),
+      claimPublicKey: claimKeys.publicKey.toString("hex"),
+      refundPublicKey: refundKeys.publicKey.toString("hex"),
+    });
 
-    console.log("Created chain swap:", createdResponse);
+    console.log("Chain swap created successfully:", createdResponse.id);
+    console.log("Swap details:");
+    console.log("- From chain:", createdResponse.from);
+    console.log("- To chain:", createdResponse.to);
+    console.log("- Amount:", createdResponse.amount, "satoshis");
+    console.log("- Lockup address:", createdResponse.lockupAddress);
+    console.log(
+      "Please proceed with the necessary steps to complete the swap."
+    );
 
     const webSocket = this.createAndSubscribeToWebSocket(createdResponse.id);
 
@@ -175,7 +179,7 @@ export default class ChainSwap extends BoltzBase {
     ];
 
     await this.fetch<{ hex: string }, { txid: string }>(
-      `/v2/chain/${createdResponse.to}/transaction`,
+      `/chain/${createdResponse.to}/transaction`,
       "POST",
       { hex: claimDetails.transaction.toHex() }
     );
@@ -260,7 +264,7 @@ export default class ChainSwap extends BoltzBase {
     claimTransaction: Transaction
   ) {
     const serverClaimDetails = await this.fetch<{}, any>(
-      `/v2/swap/chain/${createdResponse.id}/claim`,
+      `/swap/chain/${createdResponse.id}/claim`,
       "GET"
     );
 
@@ -289,7 +293,7 @@ export default class ChainSwap extends BoltzBase {
     const partialSig = musig.signPartial();
 
     const ourClaimDetails = await this.fetch<any, any>(
-      `/v2/swap/chain/${createdResponse.id}/claim`,
+      `/swap/chain/${createdResponse.id}/claim`,
       "POST",
       {
         preimage: preimage.toString("hex"),
