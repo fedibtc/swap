@@ -1,9 +1,13 @@
-import { FediInjectionProvider, ToastProvider } from "@fedibtc/ui";
+import { FediInjectionProvider, Icon, Text, ToastProvider } from "@fedibtc/ui";
 import "@fedibtc/ui/dist/index.css";
 import type { Metadata } from "next";
 import { Albert_Sans } from "next/font/google";
 import Fallback from "./components/fallback";
 import "./globals.css";
+import { AppStateProvider } from "./components/app-state-provider";
+import FixedFloat from "@/lib/ff";
+import { Suspense } from "react";
+import Container from "@/components/container";
 
 const albertSans = Albert_Sans({ subsets: ["latin"] });
 
@@ -38,10 +42,35 @@ export default function RootLayout({
               bitcoin: true,
             }}
           >
-            <Fallback>{children}</Fallback>
+            <Fallback>
+              <Suspense
+                fallback={
+                  <Container>
+                    <Icon
+                      icon="IconLoader2"
+                      size="lg"
+                      className="animate-spin text-lightGrey"
+                    />
+                    <Text>Fetching Rates...</Text>
+                  </Container>
+                }
+              >
+                <LoadedCurrencies>{children}</LoadedCurrencies>
+              </Suspense>
+            </Fallback>
           </FediInjectionProvider>
         </ToastProvider>
       </body>
     </html>
+  );
+}
+
+async function LoadedCurrencies({ children }: { children: React.ReactNode }) {
+  const ff = new FixedFloat(process.env.FF_API_KEY, process.env.FF_API_SECRET);
+
+  const currencies = await ff.currencies();
+
+  return (
+    <AppStateProvider currencies={currencies.data}>{children}</AppStateProvider>
   );
 }
