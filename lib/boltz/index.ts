@@ -7,6 +7,7 @@ import {
   ChainSwapResponse,
   ReverseSwapResponse,
   SubmarineSwapResponse,
+  SwapOutcome,
 } from "./types";
 import WebSocket from "ws";
 
@@ -54,29 +55,46 @@ export default class Boltz extends BoltzBase {
     }
   }
 
-  public createAndSubscribeToWebSocket(
+  public async awaitSwapOutcome(
     swapId: string,
     swapType: SwapType
-  ): WebSocket {
-    const webSocket = super.createAndSubscribeToWebSocket(swapId, swapType);
+  ): Promise<SwapOutcome> {
+    return new Promise((resolve, reject) => {
+      const webSocket = super.createAndSubscribeToWebSocket(swapId, swapType);
 
-    let handlers;
-    switch (swapType) {
-      case SwapType.Submarine:
-        handlers = this.submarineSwap.getWebSocketHandlers();
-        break;
-      case SwapType.Reverse:
-        handlers = this.reverseSwap.getWebSocketHandlers();
-        break;
-      case SwapType.Chain:
-        handlers = this.chainSwap.getWebSocketHandlers();
-        break;
-      default:
-        throw new Error(`Unsupported swap type: ${swapType}`);
-    }
+      let handlers;
+      switch (swapType) {
+        case SwapType.Submarine:
+          handlers = this.submarineSwap.getWebSocketHandlers();
+          break;
+        case SwapType.Reverse:
+          handlers = this.reverseSwap.getWebSocketHandlers();
+          break;
+        case SwapType.Chain:
+          handlers = this.chainSwap.getWebSocketHandlers();
+          break;
+        default:
+          reject(new Error(`Unsupported swap type: ${swapType}`));
+          return;
+      }
 
-    this.handleWebSocketMessage(webSocket, handlers);
-    return webSocket;
+      const handleMessage = (message: WebSocket.Data) => {
+        const parsedMessage = JSON.parse(message.toString());
+        if (parsedMessage.type === "swap.update") {
+          const outcome = handlers.handleSwapUpdate(parsedMessage);
+          if (outcome) {
+            webSocket.close();
+            resolve(outcome);
+          }
+        }
+      };
+
+      webSocket.on("message", handleMessage);
+      webSocket.on("error", (error) => {
+        webSocket.close();
+        reject(error);
+      });
+    });
   }
 
   public async createSubmarineSwap(

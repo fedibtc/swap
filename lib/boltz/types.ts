@@ -2,6 +2,17 @@ export interface SwapResponse {
   id: string;
 }
 
+export interface SwapOutcome {
+  status: "success" | "failed";
+  transactionId?: string;
+  preimage?: string;
+  error?: string;
+}
+
+export interface SwapHandlers {
+  handleSwapUpdate: (message: any) => SwapOutcome | null;
+}
+
 export interface ChainSwapResponse extends SwapResponse {
   claimDetails: {
     blindingKey: string;

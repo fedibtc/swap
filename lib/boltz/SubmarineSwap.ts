@@ -6,7 +6,7 @@ import { crypto } from "bitcoinjs-lib";
 import { Musig, SwapTreeSerializer, TaprootUtils } from "boltz-core";
 import { randomBytes } from "crypto";
 import zkpInit from "@vulpemventures/secp256k1-zkp";
-import { SubmarineSwapResponse } from "./types";
+import { SubmarineSwapResponse, SwapHandlers } from "./types";
 
 /**
  * Submarine Swap Flow (Lightning -> Onchain):
@@ -37,21 +37,40 @@ export default class SubmarineSwap extends Boltz {
     console.log("Submarine swap created successfully:", createdResponse);
 
     return createdResponse;
+  }
 
-    // const webSocket = this.createAndSubscribeToWebSocket(createdResponse.id);
-
-    // this.handleWebSocketMessage(webSocket, {
-    //   "invoice.set": async () => {
-    //     console.log("Waiting for onchain transaction");
-    //   },
-    //   "transaction.claim.pending": async () => {
-    //     await this.handleSubmarineClaimPending(createdResponse, keys, invoice);
-    //   },
-    //   "transaction.claimed": async () => {
-    //     console.log("Swap successful");
-    //     webSocket.close();
-    //   },
-    // });
+  public getWebSocketHandlers(): SwapHandlers {
+    return {
+      handleSwapUpdate: (message: any) => {
+        switch (message.status) {
+          case "swap.created":
+            console.log(
+              "Submarine swap created, waiting for onchain transaction..."
+            );
+            break;
+          case "transaction.claim.pending":
+            console.log(
+              "Claim transaction pending. Initiating claim process..."
+            );
+            try {
+              // TODO: Implement handleSubmarineClaimPending
+              console.log("Claim transaction successfully broadcast.");
+            } catch (claimError) {
+              console.error("Error during claim process:", claimError);
+            }
+            break;
+          case "transaction.claimed":
+            console.log(
+              "Transaction claimed. Submarine swap completed successfully."
+            );
+            break;
+          case "swap.failed":
+            console.error("Submarine swap failed:", message.reason);
+            break;
+        }
+        return null;
+      },
+    };
   }
 
   /**

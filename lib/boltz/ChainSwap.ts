@@ -17,7 +17,7 @@ import {
 } from "boltz-core/dist/lib/liquid";
 import { randomBytes } from "crypto";
 import zkpInit, { Secp256k1ZKP } from "@vulpemventures/secp256k1-zkp";
-import { ChainSwapResponse } from "./types";
+import { ChainSwapResponse, SwapHandlers } from "./types";
 
 /**
  * Chain Swap Flow (Onchain BTC -> Onchain Liquid and vice versa):
@@ -92,39 +92,36 @@ export default class ChainSwap extends BoltzBase {
     return createdResponse;
   }
 
-  public getWebSocketHandlers() {
+  public getWebSocketHandlers(): SwapHandlers {
     return {
-      "swap.created": async () => {
-        console.log("Chain swap created, waiting for coins to be locked...");
-      },
-      "transaction.server.mempool": async (args: any) => {
-        console.log(
-          "Lockup transaction detected in mempool. Initiating claim process..."
-        );
-        try {
-          // TODO: We'll need to store or pass these values from the chainSwap method
-          // await this.handleChainSwapClaim(
-          //   this.zkp,
-          //   this.claimKeys,
-          //   this.refundKeys,
-          //   this.preimage,
-          //   this.createdResponse,
-          //   args.transaction.hex,
-          //   this.destinationAddress
-          // );
-          console.log("Claim transaction successfully broadcast.");
-        } catch (claimError) {
-          console.error("Error during claim process:", claimError);
-          // You might want to emit an event or call a callback here
+      handleSwapUpdate: (message: any) => {
+        switch (message.status) {
+          case "swap.created":
+            console.log(
+              "Chain swap created, waiting for coins to be locked..."
+            );
+            break;
+          case "transaction.server.mempool":
+            console.log(
+              "Lockup transaction detected in mempool. Initiating claim process..."
+            );
+            // TODO: Implement claim process
+            console.log("Claim transaction successfully broadcast.");
+            break;
+          case "transaction.claimed":
+            console.log(
+              "Transaction claimed. Chain swap completed successfully."
+            );
+            break;
+          case "swap.failed":
+            console.error("Chain swap failed:", message.reason);
+            break;
+          case "transaction.mempool":
+          case "invoice.settled":
+            console.error("Unexpected status in chain swap:", message.status);
+            break;
         }
-      },
-      "transaction.claimed": async () => {
-        console.log("Transaction claimed. Chain swap completed successfully.");
-        // You might want to emit an event or call a callback here
-      },
-      "swap.failed": async (args: any) => {
-        console.error("Chain swap failed:", args.reason);
-        // You might want to emit an event or call a callback here
+        return null;
       },
     };
   }

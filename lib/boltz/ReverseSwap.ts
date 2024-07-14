@@ -13,7 +13,7 @@ import {
 } from "boltz-core";
 import { randomBytes } from "crypto";
 import zkpInit from "@vulpemventures/secp256k1-zkp";
-import { ReverseSwapResponse } from "./types";
+import { ReverseSwapResponse, SwapHandlers, SwapOutcome } from "./types";
 
 /**
  * Reverse Swap Flow (Onchain -> Lightning):
@@ -66,37 +66,27 @@ export default class ReverseSwap extends Boltz {
     }
   }
 
-  public getWebSocketHandlers() {
+  public getWebSocketHandlers(): SwapHandlers {
     return {
-      "swap.created": async () => {
-        console.log("Reverse swap created, waiting for invoice to be paid...");
-      },
-      "transaction.mempool": async (args: any) => {
-        console.log(
-          "Lockup transaction detected in mempool. Initiating claim process..."
-        );
-        try {
-          // TODO: We'll need to store or pass these values from the reverseSwap method
-          // await this.handleReverseSwapClaim(
-          //   this.createdResponse,
-          //   this.keys,
-          //   this.preimage,
-          //   this.destinationAddress,
-          //   args.transaction.hex
-          // );
-          console.log("Claim transaction successfully broadcast.");
-        } catch (claimError) {
-          console.error("Error during claim process:", claimError);
-          // You might want to emit an event or call a callback here
+      handleSwapUpdate: (message: any): SwapOutcome | null => {
+        switch (message.event) {
+          case "invoice.settled":
+            return {
+              status: "success",
+              transactionId: message.transactionId,
+              preimage: message.preimage,
+            };
+          case "swap.failed":
+            return {
+              status: "failed",
+              error: message.reason,
+            };
+          case "transaction.mempool":
+            return null;
+          default:
+            console.log("Unhandled swap update event:", message.event);
+            return null;
         }
-      },
-      "invoice.settled": async () => {
-        console.log("Invoice settled. Reverse swap completed successfully.");
-        // You might want to emit an event or call a callback here
-      },
-      "swap.failed": async (args: any) => {
-        console.error("Reverse swap failed:", args.reason);
-        // You might want to emit an event or call a callback here
       },
     };
   }
