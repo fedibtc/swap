@@ -5,13 +5,12 @@ import WebSocket from "ws";
 
 export default class BoltzBase {
   protected endpoint: string;
+  protected wsEndpoint: string;
   protected network: networks.Network;
 
-  constructor(
-    endpoint: string = "https://api.boltz.exchange/v2",
-    network: networks.Network = networks.bitcoin
-  ) {
+  constructor(endpoint: string, wsEndpoint: string, network: networks.Network) {
     this.endpoint = endpoint;
+    this.wsEndpoint = wsEndpoint;
     this.network = network;
     initEccLib(ecc);
   }
@@ -34,9 +33,7 @@ export default class BoltzBase {
   }
 
   protected createAndSubscribeToWebSocket(swapId: string): WebSocket {
-    const webSocket = new WebSocket(
-      `${this.endpoint.replace("http://", "ws://")}/ws`
-    );
+    const webSocket = new WebSocket(this.wsEndpoint);
     webSocket.on("open", () => {
       webSocket.send(
         JSON.stringify({
