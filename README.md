@@ -1,18 +1,20 @@
 # Fedi Swap Mod
 
-A Fedi Mod for swapping between Lightning and on-chain Bitcoin using the Boltz API, as well as other cryptocurrencies using the FixedFloat API.
+A Fedi Mod for swapping between Lightning and on-chain Bitcoin using the Boltz API, and stablecoins using the FixedFloat API.
 
 ## Features
 
 - Swap between Lightning Network and on-chain Bitcoin
-- Support for additional cryptocurrencies (e.g., USDC, USDT)
+- Support for stablecoin swaps (e.g., USDC, USDT)
 - Real-time rate fetching and updates
-- User-friendly interface with Fedi UI components
+- Reusable Fedi Mod UI components
 
 ## Environment Variables
 
 `FF_API_KEY` - FixedFloat API key
 `FF_API_SECRET` - FixedFloat API secret
+
+No env variables required for Boltz, all signing done using throwaway keys generated per swap.
 
 ## Development
 
