@@ -1,28 +1,49 @@
-# Fedi Mod Boilerplate
+# Fedi Swap Mod
 
-A template for building Fedi Mods with on-brand UI and Lightning/Nostr utilities over [Alby](https://getalby.com) and [`@nostr-dev-kit/ndk`](https://www.npmjs.com/package/@nostr-dev-kit/ndk).
+A Fedi Mod for swapping between Lightning and on-chain Bitcoin using the Boltz API, as well as other cryptocurrencies using the FixedFloat API.
 
-## Documentation
+## Features
 
-- [Components](/docs/components.md)
-- [UI Guidelines & Units](/docs/ui.md)
-- [Lightning Utilities](/docs/lightning.md)
+- Swap between Lightning Network and on-chain Bitcoin
+- Support for additional cryptocurrencies (e.g., USDC, USDT)
+- Real-time rate fetching and updates
+- User-friendly interface with Fedi UI components
 
 ## Environment Variables
 
-`POSTGRES_PRISMA_URL` - A postgresql database URI. Required for lightning utilities.
-`LIGHTNING_ADDRESS` - A lightning address (only [mutinynet.app](https://mutinynet.app) and [alby](https://getalby.com) address supported at the moment). Required for using lightning address utils.
-`BTC_NETWORK` - one of `mainnet` or `mutinynet`. Defaults to `mainnet`.
+`FF_API_KEY` - FixedFloat API key
+`FF_API_SECRET` - FixedFloat API secret
 
 ## Development
 
 1. Install packages with `bun install`
-2. Set the `POSTGRES_PRISMA_URL` environment variable to a valid postgres URI
-3. Initialize database migrations with `bun prisma migrate dev`
-4. Generate types with `bun prisma generate`
-5. Run the development server with `bun run dev`
+2. Set the required environment variables in a `.env.local` file
+3. Run the development server with `bun run dev`
 
 ## Deployment
 
 1. Build the mod with `bun run build`
 2. Start the production server with `bun run start`
+
+## Technologies Used
+
+- Next.js 14
+- React
+- TypeScript
+- Tailwind CSS
+- @fedibtc/ui components
+- FixedFloat API
+
+## Project Structure
+
+- `/app`: Next.js app router components and pages
+- `/components`: Reusable React components
+- `/lib`: Utility functions and API clients
+- `/public`: Static assets
+
+## API Integrations
+
+- FixedFloat: Used for currency swaps and rate information
+- Boltz: Implemented but not currently used (potential future integration)
+
+For more details on the implementation, refer to the source code in the `/app` and `/lib` directories.
