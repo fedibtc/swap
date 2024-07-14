@@ -1,0 +1,11 @@
+procs:
+  user:
+    shell: zsh # if on macOS
+    # shell: bash # if on Linux
+    stop: SIGKILL
+  swap:
+    shell: bun run dev
+    stop: SIGTERM
+  ngrok:
+    shell: ngrok http http://localhost:3000
+    stop: SIGTERM
