@@ -72,3 +72,12 @@ async function testChainSwapLQD2BTC() {
     console.error("Error during L-BTC to BTC chain swap:", error);
   }
 }
+
+async function testAll() {
+  await testReverseSwap();
+  // await testSubmarineSwap();
+  // await testChainSwapBTC2LQD();
+  // await testChainSwapLQD2BTC();
+}
+
+testAll();

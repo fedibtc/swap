@@ -57,6 +57,7 @@ export default class ReverseSwap extends Boltz {
       console.log("Please pay the invoice to proceed with the swap.");
 
       const webSocket = this.createAndSubscribeToWebSocket(createdResponse.id);
+      console.log("WebSocket created successfully.");
 
       this.handleWebSocketMessage(webSocket, {
         "swap.created": async () => {
