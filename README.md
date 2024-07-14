@@ -37,7 +37,7 @@ A Fedi Mod for swapping between Lightning and on-chain Bitcoin using the Boltz A
 ## Project Structure
 
 - `/app`: Next.js app router components and pages
-- `/components`: Reusable React components
+- `/components`: Reusable Fedi Mod components
 - `/lib`: Utility functions and API clients
 - `/public`: Static assets
 
