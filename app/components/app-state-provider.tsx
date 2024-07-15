@@ -21,7 +21,7 @@ export enum Direction {
 
 export enum AppScreen {
   Home,
-  Pending,
+  Status,
   Complete,
 }
 
@@ -48,7 +48,7 @@ export function AppStateProvider({
     coin: "BTC",
     isRateLoading: false,
     exchangeOrder: null,
-    screen: AppScreen.Home,
+    screen: AppScreen.Status,
   });
 
   const update = (state: Partial<AppState>) => {

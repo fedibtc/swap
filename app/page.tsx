@@ -10,7 +10,7 @@ export default function Index() {
   switch (screen) {
     case AppScreen.Home:
       return <Home />;
-    case AppScreen.Pending:
+    case AppScreen.Status:
       return <Status />;
     case AppScreen.Complete:
       return <Complete />;

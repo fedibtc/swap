@@ -86,7 +86,7 @@ export interface CreateData {
   id: string;
   type: string;
   email: string;
-  status: string;
+  status: OrderStatus;
   time: Time;
   from: From;
   to: To;
@@ -184,12 +184,22 @@ export interface OrderData {
   id: string;
   type: string;
   email: string;
-  status: string;
+  status: OrderStatus;
   time: Time;
   from: From;
   to: To;
   back: Back;
   emergency: Emergency;
+}
+
+export enum OrderStatus {
+  NEW = "NEW",
+  PENDING = "PENDING",
+  EXCHANGE = "EXCHANGE",
+  WITHDRAW = "WITHDRAW",
+  DONE = "DONE",
+  EXPIRED = "EXPIRED",
+  EMERGENCY = "EMERGENCY",
 }
 
 export type OrderResponse = FFResponse<OrderData>;

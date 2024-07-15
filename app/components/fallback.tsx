@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { Icon, Text, useFediInjectionContext } from "@fedibtc/ui"
-import Container from "./container"
-import { formatError } from "@/lib/errors"
+import { Icon, Text, useFediInjectionContext } from "@fedibtc/ui";
+import Container from "./container";
+import { formatError } from "@/lib/errors";
+import { styled } from "react-tailwind-variants";
 
 export default function Fallback({ children }: { children: React.ReactNode }) {
-  const { isLoading, error: injectionError } = useFediInjectionContext()
-
+  const { isLoading, error: injectionError } = useFediInjectionContext();
 
   if (injectionError) {
     return (
@@ -17,21 +17,21 @@ export default function Fallback({ children }: { children: React.ReactNode }) {
         </Text>
         <Text className="text-center">{formatError(injectionError)}</Text>
       </Container>
-    )
+    );
   }
 
   if (isLoading) {
     return (
       <Container>
-        <Icon
-          icon="IconLoader2"
-          size="lg"
-          className="animate-spin text-lightGrey"
-        />
+        <Loader icon="IconLoader2" size="lg" />
         <Text>{isLoading ? "Loading" : "Authenticating"}...</Text>
       </Container>
-    )
+    );
   }
 
-  return <Container>{children}</Container>
+  return <Container>{children}</Container>;
 }
+
+const Loader = styled(Icon, {
+  base: "animate-spin text-lightGrey",
+});

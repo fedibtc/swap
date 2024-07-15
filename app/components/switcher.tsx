@@ -9,6 +9,8 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { tokens } from "@/lib/constants";
+import { styled } from "react-tailwind-variants";
+import { CoinIcon, IndicatorOuter } from "./swap-indicator";
 
 export default function Switcher() {
   const { direction } = useAppState();
@@ -37,14 +39,7 @@ function LightningIndicator() {
   const lightning = currencies.find((c) => c.code === "BTCLN");
 
   return (
-    <Flex
-      grow
-      noBasis
-      width="full"
-      gap={2}
-      align="center"
-      p={2}
-      className="rounded-lg border-2 border-solid px-md py-sm disabled:pointer-events-none"
+    <IndicatorOuter
       style={{
         borderColor: lightning?.color,
         opacity: isRateLoading ? 0.5 : 1,
@@ -62,9 +57,8 @@ function LightningIndicator() {
         }
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <CoinIcon
           src={lightning?.logo}
-          className="h-4 w-4 rounded-full border-2"
           alt="Icon"
           style={{
             borderColor: lightning?.color,
@@ -72,7 +66,7 @@ function LightningIndicator() {
         />
         <Text variant="caption">Lightning ⚡</Text>
       </button>
-    </Flex>
+    </IndicatorOuter>
   );
 }
 
@@ -80,8 +74,7 @@ function SwitchButton() {
   const { direction, update, isRateLoading } = useAppState();
 
   return (
-    <button
-      className="flex rounded-lg p-2 items-center justify-center active:bg-extraLightGrey transition-colors disabled:pointer-events-none disabled:opacity-50"
+    <CoinSwitchButton
       disabled={isRateLoading}
       onClick={() =>
         update({
@@ -93,7 +86,7 @@ function SwitchButton() {
       }
     >
       <Icon icon="IconSwitchHorizontal" className="h-4 w-4 shrink-0" />
-    </button>
+    </CoinSwitchButton>
   );
 }
 
@@ -104,23 +97,20 @@ function CoinIndicator() {
 
   return (
     <Select value={coin} onValueChange={(coin) => update({ coin: coin })}>
-      <SelectTrigger
-        className="border-2 rounded-lg basis-0 grow w-full disabled:pointer-events-none disabled:opacity-50"
+      <CoinSelector
         disabled={isRateLoading}
         style={{ borderColor: currentCurrency?.color }}
       >
         <SelectValue placeholder="Select coin" />
-      </SelectTrigger>
+      </CoinSelector>
       <SelectContent>
         {tokens
           .filter((token) => currencies.find((c) => c.code === token.code))
           .map((token) => (
             <SelectItem key={token.code} value={token.code}>
               <Flex row gap={2} align="center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <CoinIcon
                   src={currencies.find((c) => c.code === token.code)?.logo}
-                  className="h-4 w-4 rounded-full border-2"
                   alt="Icon"
                   style={{
                     borderColor: currencies.find((c) => c.code === token.code)
@@ -137,3 +127,11 @@ function CoinIndicator() {
     </Select>
   );
 }
+
+const CoinSelector = styled(SelectTrigger, {
+  base: "border-2 rounded-lg basis-0 grow w-full disabled:pointer-events-none disabled:opacity-50",
+})
+
+const CoinSwitchButton = styled("button", {
+  base: "flex rounded-lg p-2 items-center justify-center active:bg-extraLightGrey transition-colors disabled:pointer-events-none disabled:opacity-50"
+})

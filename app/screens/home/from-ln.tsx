@@ -3,6 +3,7 @@ import Flex from "@/app/components/flex";
 import FormInput from "@/app/components/form-input";
 import { Button, Dialog, Icon, Scanner, Text } from "@fedibtc/ui";
 import { useEffect, useState } from "react";
+import { styled } from "react-tailwind-variants";
 
 export default function FromLN() {
   const { rate, direction, isRateLoading, coin, currencies } = useAppState();
@@ -16,6 +17,8 @@ export default function FromLN() {
   const [email, setEmail] = useState("");
 
   const currentCurrency = currencies.find((c) => c.code === coin);
+
+  const isBitcoin = coin === "BTC";
 
   const handleScan = (data: string) => {
     setAddress(data);
@@ -36,11 +39,13 @@ export default function FromLN() {
       });
   };
 
+  const handleSubmit = async () => {};
+
   useEffect(() => {
     if (direction === Direction.FromLightning) {
-      setAmount(amt => amt > minAmountSats ? amt : minAmountSats);
+      setAmount((amt) => (amt > minAmountSats ? amt : minAmountSats));
     }
-  }, [direction, minAmountSats])
+  }, [direction, minAmountSats]);
 
   return (
     <Flex col gap={4} width="full" grow>
@@ -61,29 +66,28 @@ export default function FromLN() {
           label={`${currentCurrency?.name} Address`}
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          placeholder={coin === "BTC" ? "bc1..." : "0x..."}
+          placeholder={isBitcoin ? "bc1..." : "0x..."}
           disabled={isRateLoading}
           inputRight={
-            <button
-              className="flex items-center justify-center border-solid border-2 border-lightGrey rounded-lg w-12 h-12 active:bg-extraLightGrey shrink-0"
-              onClick={() => setScanning(true)}
-            >
+            <ScannerButton onClick={() => setScanning(true)}>
               <Icon icon="IconQrcode" className="w-6 h-6" />
-            </button>
+            </ScannerButton>
           }
         />
-        <FormInput
-          label="Email Address (optional)"
-          description="Subscribe to updates from FixedFloat. Recommended for large exchanges."
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          type="email"
-          placeholder="john@doe.com"
-          disabled={isRateLoading}
-        />
+        {isBitcoin ? null : (
+          <FormInput
+            label="Email Address (optional)"
+            description="Subscribe to updates from FixedFloat. Recommended for large exchanges."
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            placeholder="john@doe.com"
+            disabled={isRateLoading}
+          />
+        )}
       </Flex>
       <Flex col>
-        <Button>Exchange</Button>
+        <Button onClick={handleSubmit}>Exchange</Button>
       </Flex>
       <Dialog
         open={scanning}
@@ -96,17 +100,22 @@ export default function FromLN() {
             onResult={handleScan}
             onError={console.log}
           />
-          <button
-            onClick={handlePaste}
-            className="flex w-full p-4 rounded-lg active:bg-extraLightGrey"
-          >
+          <PasteButton onClick={handlePaste}>
             <Flex row gap={2} align="center" justify="start" width="full" grow>
               <Icon icon="IconClipboard" className="w-6 h-6" />
               <Text weight="medium">Paste</Text>
             </Flex>
-          </button>
+          </PasteButton>
         </Flex>
       </Dialog>
     </Flex>
   );
 }
+
+const ScannerButton = styled("button", {
+  base: "flex items-center justify-center border-solid border-2 border-lightGrey rounded-lg w-12 h-12 active:bg-extraLightGrey shrink-0",
+});
+
+const PasteButton = styled("button", {
+  base: "flex w-full p-4 rounded-lg active:bg-extraLightGrey",
+});

@@ -15,13 +15,17 @@ export default function ToLN() {
   const [amount, setAmount] = useState<number>(minAmount);
   const [email, setEmail] = useState("");
 
-  const amountLabel = coin === "BTC" ? "Sats" : coin;
+  const isBitcoin = coin === "BTC";
+
+  const amountLabel = isBitcoin ? "Sats" : coin;
 
   useEffect(() => {
     if (direction === Direction.ToLightning) {
       setAmount((amt) => (amt > minAmount ? amt : minAmount));
     }
   }, [direction, minAmount]);
+
+  const handleSubmit = async () => {};
 
   return (
     <Flex col gap={4} width="full" grow>
@@ -38,18 +42,20 @@ export default function ToLN() {
           }
           disabled={isRateLoading}
         />
-        <FormInput
-          label="Email Address (optional)"
-          description="Subscribe to updates from FixedFloat. Recommended for large exchanges."
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          type="email"
-          placeholder="john@doe.com"
-          disabled={isRateLoading}
-        />
+        {isBitcoin ? null : (
+          <FormInput
+            label="Email Address (optional)"
+            description="Subscribe to updates from FixedFloat. Recommended for large exchanges."
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            placeholder="john@doe.com"
+            disabled={isRateLoading}
+          />
+        )}
       </Flex>
       <Flex col>
-        <Button>Exchange</Button>
+        <Button onClick={handleSubmit}>Exchange</Button>
       </Flex>
     </Flex>
   );
