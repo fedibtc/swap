@@ -24,10 +24,7 @@ import { ReverseSwapResponse, SwapHandlers, SwapOutcome } from "./types";
  * 5. Swap completes when invoice is settled
  */
 export default class ReverseSwap extends Boltz {
-  public async reverseSwap(
-    amount: number,
-    destinationAddress: string
-  ): Promise<ReverseSwapResponse> {
+  public async reverseSwap(amount: number): Promise<ReverseSwapResponse> {
     try {
       const preimage = randomBytes(32);
       const keys = ECPairFactory(ecc).makeRandom();
@@ -43,7 +40,7 @@ export default class ReverseSwap extends Boltz {
           from: "BTC",
           claimPublicKey: keys.publicKey.toString("hex"),
           preimageHash: crypto.sha256(preimage).toString("hex"),
-        }
+        },
       );
 
       console.log("Reverse swap created successfully:", createdResponse);
@@ -61,7 +58,7 @@ export default class ReverseSwap extends Boltz {
         console.error("Unexpected error during reverse swap:", error);
       }
       throw new Error(
-        "Failed to initiate reverse swap. Please try again later."
+        "Failed to initiate reverse swap. Please try again later.",
       );
     }
   }
@@ -99,12 +96,12 @@ export default class ReverseSwap extends Boltz {
    * @param destinationAddress The Bitcoin address to receive funds
    * @param lockupTxHex The hex of the lockup transaction
    */
-  private async handleReverseSwapClaim(
-    createdResponse: any,
+  public async handleReverseSwapClaim(
+    createdResponse: ReverseSwapResponse,
     keys: ECPairInterface,
     preimage: Buffer,
     destinationAddress: string,
-    lockupTxHex: string
+    lockupTxHex: string,
   ) {
     console.log("Creating claim transaction");
 
@@ -115,7 +112,7 @@ export default class ReverseSwap extends Boltz {
     ]);
     const tweakedKey = TaprootUtils.tweakMusig(
       musig,
-      SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree).tree
+      SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree).tree,
     );
 
     const lockupTx = Transaction.fromHex(lockupTxHex);
@@ -136,8 +133,8 @@ export default class ReverseSwap extends Boltz {
           },
         ],
         address.toOutputScript(destinationAddress, this.network),
-        fee
-      )
+        fee,
+      ),
     );
 
     const boltzSig = await this.fetch<any, any>(
@@ -148,7 +145,7 @@ export default class ReverseSwap extends Boltz {
         transaction: claimTx.toHex(),
         preimage: preimage.toString("hex"),
         pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
-      }
+      },
     );
 
     musig.aggregateNonces([
@@ -159,13 +156,13 @@ export default class ReverseSwap extends Boltz {
         0,
         [swapOutput.script],
         [swapOutput.value],
-        Transaction.SIGHASH_DEFAULT
-      )
+        Transaction.SIGHASH_DEFAULT,
+      ),
     );
 
     musig.addPartial(
       boltzPublicKey,
-      Buffer.from(boltzSig.partialSignature, "hex")
+      Buffer.from(boltzSig.partialSignature, "hex"),
     );
     musig.signPartial();
 
@@ -174,7 +171,7 @@ export default class ReverseSwap extends Boltz {
     await this.fetch<{ hex: string }, { txid: string }>(
       "/chain/BTC/transaction",
       "POST",
-      { hex: claimTx.toHex() }
+      { hex: claimTx.toHex() },
     );
   }
 }

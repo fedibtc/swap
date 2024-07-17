@@ -1,6 +1,6 @@
 "use client";
 
-import { CreateData, Currency, PriceData } from "@/lib/ff/types";
+import { Currency, OrderStatus, PriceData } from "@/lib/ff/types";
 import { createContext, useContext, useEffect, useState } from "react";
 import { getRate } from "../actions/get-rate";
 
@@ -10,8 +10,14 @@ interface AppState {
   rate: PriceData;
   isRateLoading: boolean;
   coin: string;
-  exchangeOrder: CreateData | null;
+  exchangeOrder: ExchangeData | null;
+  orderStatus: OrderStatus | null;
   screen: AppScreen;
+}
+
+interface ExchangeData {
+  id: string;
+  token: string;
 }
 
 export enum Direction {
@@ -48,7 +54,8 @@ export function AppStateProvider({
     coin: "BTC",
     isRateLoading: false,
     exchangeOrder: null,
-    screen: AppScreen.Status,
+    screen: AppScreen.Home,
+    orderStatus: null
   });
 
   const update = (state: Partial<AppState>) => {
@@ -60,15 +67,18 @@ export function AppStateProvider({
 
   useEffect(() => {
     async function updateRate() {
-      update({ isRateLoading: true })
-      const rate = value.direction === Direction.FromLightning ? await getRate("BTCLN", value.coin) : await getRate(value.coin, "BTCLN")
+      update({ isRateLoading: true });
+      const rate =
+        value.direction === Direction.FromLightning
+          ? await getRate("BTCLN", value.coin)
+          : await getRate(value.coin, "BTCLN");
 
-      update({ rate })
-      update({ isRateLoading: false })
-    } 
+      update({ rate });
+      update({ isRateLoading: false });
+    }
 
-    updateRate()
-  }, [value.direction, value.coin])
+    updateRate();
+  }, [value.direction, value.coin]);
 
   return (
     <AppStateContext.Provider value={{ ...value, update }}>

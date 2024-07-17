@@ -104,9 +104,8 @@ export default class Boltz extends BoltzBase {
 
   public async createReverseSwap(
     amount: number,
-    destinationAddress: string
   ): Promise<ReverseSwapResponse> {
-    return this.reverseSwap.reverseSwap(amount, destinationAddress);
+    return this.reverseSwap.reverseSwap(amount);
   }
 
   public async createChainSwapBTC2LQD(

@@ -1,12 +1,28 @@
-import { Direction, useAppState } from "@/app/components/app-state-provider";
+import { createOrderFromLN } from "@/app/actions/create-order-from-ln";
+import { setOrderEmail } from "@/app/actions/set-email";
+import {
+  AppScreen,
+  Direction,
+  useAppState,
+} from "@/app/components/app-state-provider";
 import Flex from "@/app/components/flex";
 import FormInput from "@/app/components/form-input";
-import { Button, Dialog, Icon, Scanner, Text } from "@fedibtc/ui";
+import {
+  Button,
+  Dialog,
+  Icon,
+  Scanner,
+  Text,
+  useFediInjection,
+  useToast,
+} from "@fedibtc/ui";
 import { useEffect, useState } from "react";
 import { styled } from "react-tailwind-variants";
 
 export default function FromLN() {
-  const { rate, direction, isRateLoading, coin, currencies } = useAppState();
+  const { rate, direction, isRateLoading, coin, currencies, update } =
+    useAppState();
+  const { webln } = useFediInjection();
   const minAmountSats =
     direction === Direction.FromLightning
       ? Number(rate.from.min) * 100000000
@@ -15,6 +31,9 @@ export default function FromLN() {
   const [address, setAddress] = useState("");
   const [scanning, setScanning] = useState(false);
   const [email, setEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const toast = useToast();
 
   const currentCurrency = currencies.find((c) => c.code === coin);
 
@@ -39,7 +58,51 @@ export default function FromLN() {
       });
   };
 
-  const handleSubmit = async () => {};
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      let correctedAmount = amount / 100000000;
+
+      let input = {
+        fromCcy: "BTCLN",
+        toCcy: coin,
+        // 1/10th Fee
+        amount: correctedAmount + correctedAmount / 100,
+        direction: "from",
+        type: "fixed",
+        toAddress: address,
+      };
+      console.log(input);
+      const res = await createOrderFromLN(input);
+
+      if (!res.success) {
+        throw new Error(res.message);
+      }
+
+      if (email) {
+        await setOrderEmail({
+          id: res.data.id,
+          token: res.data.token,
+          email: email,
+        });
+      }
+
+      await webln.sendPayment(res.data.from.address);
+
+      update({
+        exchangeOrder: {
+          id: res.data.id,
+          token: res.data.token,
+        },
+        orderStatus: res.data.status,
+        screen: AppScreen.Status,
+      });
+    } catch (e) {
+      toast.error(e);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (direction === Direction.FromLightning) {
@@ -74,20 +137,20 @@ export default function FromLN() {
             </ScannerButton>
           }
         />
-        {isBitcoin ? null : (
-          <FormInput
-            label="Email Address (optional)"
-            description="Subscribe to updates from FixedFloat. Recommended for large exchanges."
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            placeholder="john@doe.com"
-            disabled={isRateLoading}
-          />
-        )}
+        <FormInput
+          label="Email Address (optional)"
+          description="Subscribe to updates from FixedFloat. Recommended for large exchanges."
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          type="email"
+          placeholder="john@doe.com"
+          disabled={isRateLoading}
+        />
       </Flex>
       <Flex col>
-        <Button onClick={handleSubmit}>Exchange</Button>
+        <Button onClick={handleSubmit} loading={isSubmitting}>
+          Exchange
+        </Button>
       </Flex>
       <Dialog
         open={scanning}

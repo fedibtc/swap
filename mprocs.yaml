@@ -6,6 +6,3 @@ procs:
   swap:
     shell: bun run dev
     stop: SIGTERM
-  ngrok:
-    shell: ngrok http http://localhost:3000
-    stop: SIGTERM
