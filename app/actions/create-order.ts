@@ -4,7 +4,7 @@ import { formatError } from "@/lib/errors";
 import { fixedFloat } from "@/lib/ff";
 import { CreateData, CreateRequest } from "@/lib/ff/types";
 
-export async function createOrderFromLN(
+export async function createOrder(
   args: CreateRequest,
 ): Promise<
   { success: true; data: CreateData } | { success: false; message: string }
@@ -12,9 +12,9 @@ export async function createOrderFromLN(
   try {
     const res = await fixedFloat.create(args);
 
-    console.log(res)
+    console.log(res);
 
-    if(res.code > 0) {
+    if (res.code > 0) {
       throw new Error(res.msg);
     }
 

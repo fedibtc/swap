@@ -53,7 +53,7 @@ export default class Boltz extends BoltzBase {
 
   public async awaitSwapOutcome(
     swapId: string,
-    swapType: SwapType
+    swapType: SwapType,
   ): Promise<SwapOutcome> {
     return new Promise((resolve, reject) => {
       const webSocket = super.createAndSubscribeToWebSocket(swapId, swapType);
@@ -97,27 +97,25 @@ export default class Boltz extends BoltzBase {
 
   public async createSubmarineSwap(
     invoice: string,
-    refundAddress: string
+    refundAddress: string,
   ): Promise<SubmarineSwapResponse> {
     return this.submarineSwap.submarineSwap(invoice, refundAddress);
   }
 
-  public async createReverseSwap(
-    amount: number,
-  ): Promise<ReverseSwapResponse> {
+  public async createReverseSwap(amount: number): Promise<ReverseSwapResponse> {
     return this.reverseSwap.reverseSwap(amount);
   }
 
   public async createChainSwapBTC2LQD(
     amount: number,
-    destinationAddress: string
+    destinationAddress: string,
   ): Promise<ChainSwapResponse> {
     return this.chainSwap.chainSwapBTC2LQD(amount, destinationAddress);
   }
 
   public async createChainSwapLQD2BTC(
     amount: number,
-    destinationAddress: string
+    destinationAddress: string,
   ): Promise<ChainSwapResponse> {
     return this.chainSwap.chainSwapLQD2BTC(amount, destinationAddress);
   }

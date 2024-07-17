@@ -37,7 +37,7 @@ export default class ChainSwap extends BoltzBase {
    */
   public async chainSwapBTC2LQD(
     amount: number,
-    destinationAddress: string
+    destinationAddress: string,
   ): Promise<ChainSwapResponse> {
     return this.chainSwap(amount, "BTC", "L-BTC", destinationAddress);
   }
@@ -49,7 +49,7 @@ export default class ChainSwap extends BoltzBase {
    */
   public async chainSwapLQD2BTC(
     amount: number,
-    destinationAddress: string
+    destinationAddress: string,
   ): Promise<ChainSwapResponse> {
     return this.chainSwap(amount, "L-BTC", "BTC", destinationAddress);
   }
@@ -65,7 +65,7 @@ export default class ChainSwap extends BoltzBase {
     amount: number,
     fromChain: string,
     toChain: string,
-    destinationAddress: string
+    destinationAddress: string,
   ): Promise<ChainSwapResponse> {
     const zkp = await zkpInit();
     init(zkp);
@@ -84,7 +84,7 @@ export default class ChainSwap extends BoltzBase {
         preimageHash: crypto.sha256(preimage).toString("hex"),
         claimPublicKey: claimKeys.publicKey.toString("hex"),
         refundPublicKey: refundKeys.publicKey.toString("hex"),
-      }
+      },
     );
 
     console.log("Chain swap created successfully:", createdResponse);
@@ -98,19 +98,19 @@ export default class ChainSwap extends BoltzBase {
         switch (message.status) {
           case "swap.created":
             console.log(
-              "Chain swap created, waiting for coins to be locked..."
+              "Chain swap created, waiting for coins to be locked...",
             );
             break;
           case "transaction.server.mempool":
             console.log(
-              "Lockup transaction detected in mempool. Initiating claim process..."
+              "Lockup transaction detected in mempool. Initiating claim process...",
             );
             // TODO: Implement claim process
             console.log("Claim transaction successfully broadcast.");
             break;
           case "transaction.claimed":
             console.log(
-              "Transaction claimed. Chain swap completed successfully."
+              "Transaction claimed. Chain swap completed successfully.",
             );
             break;
           case "swap.failed":
@@ -143,7 +143,7 @@ export default class ChainSwap extends BoltzBase {
     preimage: Buffer,
     createdResponse: any,
     lockupTransactionHex: string,
-    destinationAddress: string
+    destinationAddress: string,
   ) {
     const claimDetails = this.createClaimTransaction(
       zkp,
@@ -151,7 +151,7 @@ export default class ChainSwap extends BoltzBase {
       preimage,
       createdResponse,
       lockupTransactionHex,
-      destinationAddress
+      destinationAddress,
     );
 
     const boltzPartialSig = await this.getBoltzPartialSignature(
@@ -160,7 +160,7 @@ export default class ChainSwap extends BoltzBase {
       preimage,
       createdResponse,
       Buffer.from(claimDetails.musig.getPublicNonce()),
-      claimDetails.transaction
+      claimDetails.transaction,
     );
 
     claimDetails.musig.aggregateNonces([
@@ -172,13 +172,13 @@ export default class ChainSwap extends BoltzBase {
         0,
         [claimDetails.swapOutput.script],
         [claimDetails.swapOutput.value],
-        Transaction.SIGHASH_DEFAULT
-      )
+        Transaction.SIGHASH_DEFAULT,
+      ),
     );
 
     claimDetails.musig.addPartial(
       claimDetails.boltzPublicKey,
-      boltzPartialSig.partialSignature
+      boltzPartialSig.partialSignature,
     );
 
     claimDetails.musig.signPartial();
@@ -190,7 +190,7 @@ export default class ChainSwap extends BoltzBase {
     await this.fetch<{ hex: string }, { txid: string }>(
       `/chain/${createdResponse.to}/transaction`,
       "POST",
-      { hex: claimDetails.transaction.toHex() }
+      { hex: claimDetails.transaction.toHex() },
     );
   }
 
@@ -210,11 +210,11 @@ export default class ChainSwap extends BoltzBase {
     preimage: Buffer,
     createdResponse: any,
     lockupTransactionHex: string,
-    destinationAddress: string
+    destinationAddress: string,
   ) {
     const boltzPublicKey = Buffer.from(
       createdResponse.claimDetails.serverPublicKey,
-      "hex"
+      "hex",
     );
 
     const musig = new Musig(zkp, claimKeys, randomBytes(32), [
@@ -224,8 +224,8 @@ export default class ChainSwap extends BoltzBase {
     const tweakedKey = LiquidTaprootUtils.tweakMusig(
       musig,
       SwapTreeSerializer.deserializeSwapTree(
-        createdResponse.claimDetails.swapTree
-      ).tree
+        createdResponse.claimDetails.swapTree,
+      ).tree,
     );
 
     const lockupTx = Transaction.fromHex(lockupTransactionHex);
@@ -247,8 +247,8 @@ export default class ChainSwap extends BoltzBase {
           },
         ],
         address.toOutputScript(destinationAddress, this.network),
-        fee
-      )
+        fee,
+      ),
     );
 
     return { musig, transaction, swapOutput, boltzPublicKey };
@@ -270,16 +270,16 @@ export default class ChainSwap extends BoltzBase {
     preimage: Buffer,
     createdResponse: any,
     claimPubNonce: Buffer,
-    claimTransaction: Transaction
+    claimTransaction: Transaction,
   ) {
     const serverClaimDetails = await this.fetch<{}, any>(
       `/swap/chain/${createdResponse.id}/claim`,
-      "GET"
+      "GET",
     );
 
     const boltzPublicKey = Buffer.from(
       createdResponse.lockupDetails.serverPublicKey,
-      "hex"
+      "hex",
     );
 
     const musig = new Musig(zkp, refundKeys, randomBytes(32), [
@@ -289,15 +289,15 @@ export default class ChainSwap extends BoltzBase {
     TaprootUtils.tweakMusig(
       musig,
       SwapTreeSerializer.deserializeSwapTree(
-        createdResponse.lockupDetails.swapTree
-      ).tree
+        createdResponse.lockupDetails.swapTree,
+      ).tree,
     );
 
     musig.aggregateNonces([
       [boltzPublicKey, Buffer.from(serverClaimDetails.pubNonce, "hex")],
     ]);
     musig.initializeSession(
-      Buffer.from(serverClaimDetails.transactionHash, "hex")
+      Buffer.from(serverClaimDetails.transactionHash, "hex"),
     );
     const partialSig = musig.signPartial();
 
@@ -315,7 +315,7 @@ export default class ChainSwap extends BoltzBase {
           transaction: claimTransaction.toHex(),
           pubNonce: claimPubNonce.toString("hex"),
         },
-      }
+      },
     );
 
     return {

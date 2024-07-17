@@ -78,4 +78,7 @@ export default class FixedFloat {
   }
 }
 
-export const fixedFloat = new FixedFloat(process.env.FF_API_KEY, process.env.FF_API_SECRET);
+export const fixedFloat = new FixedFloat(
+  process.env.FF_API_KEY,
+  process.env.FF_API_SECRET,
+);

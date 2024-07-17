@@ -21,7 +21,7 @@ async function testSubmarineSwap() {
   try {
     const boltz = new Boltz(NetworkType.Testnet);
     const invoice = await prompt(
-      "Please enter a fresh testnet Lightning invoice: "
+      "Please enter a fresh testnet Lightning invoice: ",
     );
     if (!invoice) {
       throw new Error("No invoice provided");
@@ -33,7 +33,7 @@ async function testSubmarineSwap() {
 
     const outcome = await boltz.awaitSwapOutcome(
       response.id,
-      SwapType.Submarine
+      SwapType.Submarine,
     );
     console.log("Submarine swap outcome:", outcome);
   } catch (error) {

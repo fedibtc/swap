@@ -68,9 +68,11 @@ export default function RootLayout({
 
 async function LoadedCurrencies({ children }: { children: React.ReactNode }) {
   const currencies = await fixedFloat.currencies();
-  const rate = await getRate("BTCLN", "BTC")
+  const rate = await getRate("BTCLN", "BTC");
 
   return (
-    <AppStateProvider currencies={currencies.data} rate={rate}>{children}</AppStateProvider>
+    <AppStateProvider currencies={currencies.data} rate={rate}>
+      {children}
+    </AppStateProvider>
   );
 }

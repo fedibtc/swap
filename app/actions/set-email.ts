@@ -6,13 +6,11 @@ import { SetEmailRequest } from "@/lib/ff/types";
 
 export async function setOrderEmail(
   args: SetEmailRequest,
-): Promise<
-  { success: true; } | { success: false; message: string }
-> {
+): Promise<{ success: true } | { success: false; message: string }> {
   try {
     const res = await fixedFloat.setEmail(args);
 
-    if(res.code > 0) {
+    if (res.code > 0) {
       throw new Error(res.msg);
     }
 

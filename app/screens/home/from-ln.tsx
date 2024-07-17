@@ -1,4 +1,4 @@
-import { createOrderFromLN } from "@/app/actions/create-order-from-ln";
+import { createOrder } from "@/app/actions/create-order";
 import { setOrderEmail } from "@/app/actions/set-email";
 import {
   AppScreen,
@@ -63,7 +63,7 @@ export default function FromLN() {
     try {
       let correctedAmount = amount / 100000000;
 
-      let input = {
+      const res = await createOrder({
         fromCcy: "BTCLN",
         toCcy: coin,
         // 1/10th Fee
@@ -71,9 +71,7 @@ export default function FromLN() {
         direction: "from",
         type: "fixed",
         toAddress: address,
-      };
-      console.log(input);
-      const res = await createOrderFromLN(input);
+      });
 
       if (!res.success) {
         throw new Error(res.message);
@@ -87,12 +85,14 @@ export default function FromLN() {
         });
       }
 
-      await webln.sendPayment(res.data.from.address);
-
+      // TODO: Pay from-ln in status page
       update({
         exchangeOrder: {
           id: res.data.id,
           token: res.data.token,
+          fromAmount: Number(res.data.from.amount),
+          toAmount: Number(res.data.to.amount),
+          payAddress: res.data.from.address,
         },
         orderStatus: res.data.status,
         screen: AppScreen.Status,
@@ -115,6 +115,7 @@ export default function FromLN() {
       <Flex col gap={4} grow>
         <FormInput
           label="Amount (Sats)"
+          description="Not including 10% exchange fee"
           value={String(amount)}
           onChange={(e) => setAmount(Number(e.target.value))}
           type="number"

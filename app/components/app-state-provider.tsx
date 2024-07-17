@@ -18,6 +18,9 @@ interface AppState {
 interface ExchangeData {
   id: string;
   token: string;
+  fromAmount: number;
+  toAmount: number;
+  payAddress: string;
 }
 
 export enum Direction {
@@ -55,7 +58,7 @@ export function AppStateProvider({
     isRateLoading: false,
     exchangeOrder: null,
     screen: AppScreen.Home,
-    orderStatus: null
+    orderStatus: null,
   });
 
   const update = (state: Partial<AppState>) => {

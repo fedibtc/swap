@@ -130,8 +130,8 @@ function CoinIndicator() {
 
 const CoinSelector = styled(SelectTrigger, {
   base: "border-2 rounded-lg basis-0 grow w-full disabled:pointer-events-none disabled:opacity-50",
-})
+});
 
 const CoinSwitchButton = styled("button", {
-  base: "flex rounded-lg p-2 items-center justify-center active:bg-extraLightGrey transition-colors disabled:pointer-events-none disabled:opacity-50"
-})
+  base: "flex rounded-lg p-2 items-center justify-center active:bg-extraLightGrey transition-colors disabled:pointer-events-none disabled:opacity-50",
+});

@@ -12,11 +12,7 @@ export default function Home() {
   return (
     <Container className="justify-start items-stretch w-full p-4">
       <Switcher />
-      {direction === Direction.FromLightning ? (
-        <FromLN />
-      ) : (
-        <ToLN />
-      )}
+      {direction === Direction.FromLightning ? <FromLN /> : <ToLN />}
     </Container>
   );
 }

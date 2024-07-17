@@ -19,7 +19,7 @@ import { SubmarineSwapResponse, SwapHandlers } from "./types";
 export default class SubmarineSwap extends Boltz {
   public async submarineSwap(
     invoice: string,
-    refundAddress: string
+    refundAddress: string,
   ): Promise<SubmarineSwapResponse> {
     const keys = ECPairFactory(ecc).makeRandom();
 
@@ -31,7 +31,7 @@ export default class SubmarineSwap extends Boltz {
         to: "BTC",
         from: "BTC",
         refundPublicKey: keys.publicKey.toString("hex"),
-      }
+      },
     );
 
     console.log("Submarine swap created successfully:", createdResponse);
@@ -45,12 +45,12 @@ export default class SubmarineSwap extends Boltz {
         switch (message.status) {
           case "swap.created":
             console.log(
-              "Submarine swap created, waiting for onchain transaction..."
+              "Submarine swap created, waiting for onchain transaction...",
             );
             break;
           case "transaction.claim.pending":
             console.log(
-              "Claim transaction pending. Initiating claim process..."
+              "Claim transaction pending. Initiating claim process...",
             );
             try {
               // TODO: Implement handleSubmarineClaimPending
@@ -61,7 +61,7 @@ export default class SubmarineSwap extends Boltz {
             break;
           case "transaction.claimed":
             console.log(
-              "Transaction claimed. Submarine swap completed successfully."
+              "Transaction claimed. Submarine swap completed successfully.",
             );
             break;
           case "swap.failed":
@@ -82,19 +82,19 @@ export default class SubmarineSwap extends Boltz {
   private async handleSubmarineClaimPending(
     createdResponse: any,
     keys: ECPairInterface,
-    invoice: string
+    invoice: string,
   ) {
     console.log("Creating cooperative claim transaction");
 
     const claimTxDetails = await this.fetch<{}, any>(
       `/swap/submarine/${createdResponse.id}/claim`,
-      "GET"
+      "GET",
     );
 
     const invoicePreimageHash = Buffer.from(
       bolt11.decode(invoice).tags.find((tag) => tag.tagName === "payment_hash")!
         .data as string,
-      "hex"
+      "hex",
     );
 
     if (
@@ -113,7 +113,7 @@ export default class SubmarineSwap extends Boltz {
 
     TaprootUtils.tweakMusig(
       musig,
-      SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree).tree
+      SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree).tree,
     );
 
     musig.aggregateNonces([

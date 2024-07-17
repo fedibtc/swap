@@ -19,7 +19,7 @@ export default class BoltzBase {
   protected async fetch<Req extends {}, Res extends {}>(
     path: string,
     method: "GET" | "POST",
-    body?: Req
+    body?: Req,
   ): Promise<Res> {
     const url = `${this.endpoint}${path}`;
     const config = {
@@ -35,7 +35,7 @@ export default class BoltzBase {
 
   protected createAndSubscribeToWebSocket(
     swapId: string,
-    swapType: SwapType
+    swapType: SwapType,
   ): WebSocket {
     const webSocket = new WebSocket(this.wsEndpoint);
     webSocket.on("open", () => {
@@ -44,7 +44,7 @@ export default class BoltzBase {
           op: "subscribe",
           channel: "swap.update",
           args: [swapId],
-        })
+        }),
       );
     });
     return webSocket;
@@ -54,7 +54,7 @@ export default class BoltzBase {
     webSocket: WebSocket,
     handlers: {
       [key: string]: (args: any) => Promise<void>;
-    }
+    },
   ) {
     webSocket.on("message", async (rawMsg) => {
       const msg = JSON.parse(rawMsg.toString("utf-8"));

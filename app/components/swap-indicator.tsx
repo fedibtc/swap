@@ -81,8 +81,8 @@ export const IndicatorOuter = styled(Flex, {
     loading: {
       true: "opacity-50",
       false: "opacity-100",
-    }
-  }
+    },
+  },
 });
 
 export const CoinIcon = styled("img", {
@@ -92,4 +92,3 @@ export const CoinIcon = styled("img", {
 const SwitchIcon = styled("div", {
   base: "flex rounded-lg p-2 items-center justify-center transition-colors disabled:pointer-events-none",
 });
-
