@@ -58,7 +58,7 @@ export default class Boltz extends BoltzBase {
     return new Promise((resolve, reject) => {
       const webSocket = super.createAndSubscribeToWebSocket(swapId, swapType);
       console.log("WebSocket created and subscribed to swap ID:", swapId);
-      let handlers;
+      let handlers: any;
       switch (swapType) {
         case SwapType.Submarine:
           handlers = this.submarineSwap.getWebSocketHandlers();
