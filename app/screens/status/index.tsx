@@ -8,7 +8,6 @@ import {
 } from "@/app/components/app-state-provider";
 import Flex from "@/app/components/flex";
 import SwapIndicator from "@/app/components/swap-indicator";
-import Container from "@/components/container";
 import { OrderStatus } from "@/lib/ff/types";
 import { Icon, Text, useFediInjection } from "@fedibtc/ui";
 import { useEffect, useState } from "react";
@@ -16,6 +15,7 @@ import { styled } from "react-tailwind-variants";
 import { PayNotice } from "./pay-notice";
 import { PaidNotice } from "./paid-notice";
 import { StatusProgressStep } from "./status-step";
+import Container from "@/app/components/container";
 
 const statusSteps = [
   OrderStatus.NEW,

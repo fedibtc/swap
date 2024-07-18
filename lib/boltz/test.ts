@@ -7,7 +7,7 @@ async function testReverseSwap() {
     const amount = 100000;
     const destinationAddress = "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx";
 
-    const response = await boltz.createReverseSwap(amount, destinationAddress);
+    const response = await boltz.createReverseSwap(amount);
     console.log("Reverse swap initiated successfully!");
 
     const outcome = await boltz.awaitSwapOutcome(response.id, SwapType.Reverse);

@@ -7,7 +7,7 @@
     "dev": "NODE_ENV=development next dev",
     "build": "next build",
     "start": "NODE_ENV=production next start",
-    "lint": "next lint",
+    "lint": "tsc --noEmit && next lint",
     "format": "prettier --ignore-path .gitignore --write \"**/*.{js,ts,tsx}\""
   },
   "dependencies": {

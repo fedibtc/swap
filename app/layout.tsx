@@ -7,8 +7,8 @@ import "./globals.css";
 import { AppStateProvider } from "./components/app-state-provider";
 import { fixedFloat } from "@/lib/ff";
 import { Suspense } from "react";
-import Container from "@/components/container";
 import { getRate } from "./actions/get-rate";
+import Container from "./components/container";
 
 const albertSans = Albert_Sans({ subsets: ["latin"] });
 
