@@ -14,11 +14,18 @@ import { styled } from "react-tailwind-variants";
 export default function FromLN() {
   const { rate, direction, isRateLoading, coin, currencies, update } =
     useAppState();
+
   const minAmountSats =
     direction === Direction.FromLightning
       ? Number(rate.from.min) * 100000000
       : 0;
-  const [amount, setAmount] = useState<number>(minAmountSats);
+
+  const maxAmountSats =
+    direction === Direction.FromLightning
+      ? Number(rate.from.max) * 100000000
+      : 0;
+
+  const [amount, setAmount] = useState<string>(String(minAmountSats));
   const [address, setAddress] = useState("");
   const [scanning, setScanning] = useState(false);
   const [email, setEmail] = useState("");
@@ -27,8 +34,8 @@ export default function FromLN() {
   const toast = useToast();
 
   const currentCurrency = currencies.find((c) => c.code === coin);
-
   const isBitcoin = coin === "BTC";
+  const amountNumber = Number(amount);
 
   const handleScan = (data: string) => {
     setAddress(data);
@@ -52,7 +59,7 @@ export default function FromLN() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      let correctedAmount = amount / 100000000;
+      let correctedAmount = amountNumber / 100000000;
 
       const res = await createOrder({
         fromCcy: "BTCLN",
@@ -93,9 +100,19 @@ export default function FromLN() {
 
   useEffect(() => {
     if (direction === Direction.FromLightning) {
-      setAmount((amt) => (amt > minAmountSats ? amt : minAmountSats));
+      setAmount((a) => {
+        const amt = Number(a);
+
+        return String(
+          amt < minAmountSats
+            ? minAmountSats
+            : amt > maxAmountSats
+              ? maxAmountSats
+              : amt,
+        );
+      });
     }
-  }, [direction, minAmountSats]);
+  }, [direction, minAmountSats, maxAmountSats]);
 
   return (
     <Flex col gap={4} width="full" grow>
@@ -103,13 +120,17 @@ export default function FromLN() {
         <FormInput
           label="Amount (Sats)"
           description="Not including 10% exchange fee"
-          value={String(amount)}
-          onChange={(e) => setAmount(Number(e.target.value))}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
           type="number"
           inputMode="decimal"
           step="any"
           error={
-            amount < minAmountSats ? `Min ${minAmountSats} sats` : undefined
+            amountNumber < minAmountSats
+              ? `Min ${minAmountSats} sats`
+              : amountNumber > maxAmountSats
+                ? `Max ${maxAmountSats} sats`
+                : undefined
           }
           disabled={isRateLoading}
         />

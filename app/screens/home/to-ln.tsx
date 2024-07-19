@@ -23,18 +23,20 @@ export default function ToLN() {
         : Number(rate.from.min)
       : 0;
 
-  const [amount, setAmount] = useState<number>(minAmount);
+  const maxAmount =
+    direction === Direction.ToLightning
+      ? coin === "BTC"
+        ? Number(rate.from.max) * 100000000
+        : Number(rate.from.max)
+      : 0;
+
+  const [amount, setAmount] = useState<string>(String(minAmount));
   const [email, setEmail] = useState("");
   const [isOrdering, setIsOrdering] = useState(false);
 
   const isBitcoin = coin === "BTC";
   const amountLabel = isBitcoin ? "Sats" : coin;
-
-  useEffect(() => {
-    if (direction === Direction.ToLightning) {
-      setAmount((amt) => (amt > minAmount ? amt : minAmount));
-    }
-  }, [direction, minAmount]);
+  const amountNumber = Number(amount);
 
   const handleSubmit = async () => {
     setIsOrdering(true);
@@ -42,8 +44,8 @@ export default function ToLN() {
       const rate = await getRate(coin, "BTCLN");
 
       const btc = isBitcoin
-        ? amount / 100000000
-        : +(amount * Number(rate.from.rate)).toFixed(7);
+        ? amountNumber / 100000000
+        : +(amountNumber * Number(rate.from.rate)).toFixed(7);
 
       console.log(btc, "sats");
       console.log(rate);
@@ -90,19 +92,34 @@ export default function ToLN() {
     }
   };
 
+  useEffect(() => {
+    if (direction === Direction.ToLightning) {
+      setAmount((a) => {
+        const amt = Number(a);
+
+        return String(
+          amt < minAmount ? minAmount : amt > maxAmount ? maxAmount : amt,
+        );
+      });
+    }
+  }, [direction, minAmount, maxAmount]);
   return (
     <Flex col gap={4} width="full" grow>
       <Flex col gap={4} grow>
         <FormInput
           label={`Amount (${amountLabel})`}
           description="Not including 10% exchange fee"
-          value={String(amount)}
-          onChange={(e) => setAmount(Number(e.target.value))}
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
           type="number"
           inputMode="decimal"
           step="any"
           error={
-            amount < minAmount ? `Min ${minAmount} ${amountLabel}` : undefined
+            amountNumber < minAmount
+              ? `Min ${minAmount} ${amountLabel}`
+              : amountNumber > maxAmount
+                ? `Max ${maxAmount} ${amountLabel}`
+                : undefined
           }
           disabled={isRateLoading}
         />

@@ -99,7 +99,9 @@ function CoinIndicator() {
     <Select value={coin} onValueChange={(coin) => update({ coin: coin })}>
       <CoinSelector
         disabled={isRateLoading}
-        style={{ borderColor: currentCurrency?.color }}
+        style={{
+          borderColor: coin === "ETH" ? "black" : currentCurrency?.color,
+        }}
       >
         <SelectValue placeholder="Select coin" />
       </CoinSelector>

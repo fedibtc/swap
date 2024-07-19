@@ -60,7 +60,7 @@ function CoinIndicator() {
     <IndicatorOuter
       loading={isRateLoading}
       style={{
-        borderColor: currentCoin?.color,
+        borderColor: coin === "ETH" ? "black" : currentCoin?.color,
       }}
     >
       <CoinIcon
