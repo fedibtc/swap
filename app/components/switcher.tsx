@@ -1,13 +1,13 @@
 import { Icon, Text } from "@fedibtc/ui";
 import { Direction, useAppState } from "./app-state-provider";
-import Flex from "./flex";
+import Flex from "./ui/flex";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectValue,
   SelectTrigger,
-} from "@/components/ui/select";
+} from "./ui/select";
 import { tokens } from "@/lib/constants";
 import { styled } from "react-tailwind-variants";
 import { CoinIcon, IndicatorOuter } from "./swap-indicator";

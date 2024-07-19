@@ -5,24 +5,15 @@ import {
   Direction,
   useAppState,
 } from "@/app/components/app-state-provider";
-import Flex from "@/app/components/flex";
+import Flex from "@/app/components/ui/flex";
 import FormInput from "@/app/components/form-input";
-import {
-  Button,
-  Dialog,
-  Icon,
-  Scanner,
-  Text,
-  useFediInjection,
-  useToast,
-} from "@fedibtc/ui";
+import { Button, Dialog, Icon, Scanner, Text, useToast } from "@fedibtc/ui";
 import { useEffect, useState } from "react";
 import { styled } from "react-tailwind-variants";
 
 export default function FromLN() {
   const { rate, direction, isRateLoading, coin, currencies, update } =
     useAppState();
-  const { webln } = useFediInjection();
   const minAmountSats =
     direction === Direction.FromLightning
       ? Number(rate.from.min) * 100000000
@@ -90,11 +81,7 @@ export default function FromLN() {
         exchangeOrder: {
           id: res.data.id,
           token: res.data.token,
-          fromAmount: Number(res.data.from.amount),
-          toAmount: Number(res.data.to.amount),
-          payAddress: res.data.from.address,
         },
-        orderStatus: res.data.status,
         screen: AppScreen.Status,
       });
     } catch (e) {
@@ -127,7 +114,7 @@ export default function FromLN() {
           disabled={isRateLoading}
         />
         <FormInput
-          label={`${currentCurrency?.name} Address`}
+          label={`${currentCurrency?.network} Address`}
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           placeholder={isBitcoin ? "bc1..." : "0x..."}

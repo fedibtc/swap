@@ -6,28 +6,28 @@ import {
   Direction,
   useAppState,
 } from "@/app/components/app-state-provider";
-import Flex from "@/app/components/flex";
+import Flex from "@/app/components/ui/flex";
 import FormInput from "@/app/components/form-input";
 import { Button, useFediInjection, useToast } from "@fedibtc/ui";
 import { useEffect, useState } from "react";
 
 export default function ToLN() {
   const { rate, direction, isRateLoading, coin, update } = useAppState();
+  const { webln } = useFediInjection();
+  const toast = useToast();
+
   const minAmount =
     direction === Direction.ToLightning
       ? coin === "BTC"
         ? Number(rate.from.min) * 100000000
         : Number(rate.from.min)
       : 0;
+
   const [amount, setAmount] = useState<number>(minAmount);
   const [email, setEmail] = useState("");
   const [isOrdering, setIsOrdering] = useState(false);
 
-  const { webln } = useFediInjection();
-  const toast = useToast();
-
   const isBitcoin = coin === "BTC";
-
   const amountLabel = isBitcoin ? "Sats" : coin;
 
   useEffect(() => {
@@ -80,11 +80,7 @@ export default function ToLN() {
         exchangeOrder: {
           id: res.data.id,
           token: res.data.token,
-          fromAmount: Number(res.data.from.amount),
-          toAmount: Number(res.data.to.amount),
-          payAddress: res.data.from.address,
         },
-        orderStatus: res.data.status,
         screen: AppScreen.Status,
       });
     } catch (e) {

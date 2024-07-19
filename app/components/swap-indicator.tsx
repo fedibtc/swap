@@ -1,6 +1,6 @@
 import { Icon, Text } from "@fedibtc/ui";
 import { Direction, useAppState } from "./app-state-provider";
-import Flex from "./flex";
+import Flex from "./ui/flex";
 import { styled } from "react-tailwind-variants";
 
 export default function SwapIndicator() {

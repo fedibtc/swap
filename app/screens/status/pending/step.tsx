@@ -1,8 +1,8 @@
-import Flex from "@/app/components/flex";
+import Flex from "@/app/components/ui/flex";
 import { Icon, Text } from "@fedibtc/ui";
 import { styled } from "react-tailwind-variants";
 
-export function StatusProgressStep({
+export function ProgressStep({
   status,
   text,
 }: {

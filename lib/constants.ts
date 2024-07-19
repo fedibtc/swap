@@ -11,12 +11,6 @@ export const tokens = [
     name: "USDC",
     network: "ethereum",
   },
-  // {
-  //   code: "USDCTRC",
-  //   contract_address: "TEkxiTehnzSmSe2XqrBj4w32RUN966rdz8",
-  //   name: "USDC",
-  //   network: "tron",
-  // },
   {
     code: "USDT",
     contract_address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",

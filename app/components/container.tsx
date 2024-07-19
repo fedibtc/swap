@@ -1,6 +1,6 @@
 import { ComponentProps } from "react";
 import { styled } from "react-tailwind-variants";
-import Flex from "./flex";
+import Flex from "./ui/flex";
 
 export default function Container(
   props: ComponentProps<typeof ContainerInner>,

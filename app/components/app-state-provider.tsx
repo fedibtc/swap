@@ -1,6 +1,6 @@
 "use client";
 
-import { Currency, OrderStatus, PriceData } from "@/lib/ff/types";
+import { Currency, PriceData } from "@/lib/ff/types";
 import { createContext, useContext, useEffect, useState } from "react";
 import { getRate } from "../actions/get-rate";
 
@@ -11,16 +11,12 @@ interface AppState {
   isRateLoading: boolean;
   coin: string;
   exchangeOrder: ExchangeData | null;
-  orderStatus: OrderStatus | null;
   screen: AppScreen;
 }
 
 interface ExchangeData {
   id: string;
   token: string;
-  fromAmount: number;
-  toAmount: number;
-  payAddress: string;
 }
 
 export enum Direction {
@@ -31,7 +27,6 @@ export enum Direction {
 export enum AppScreen {
   Home,
   Status,
-  Complete,
 }
 
 export const AppStateContext = createContext<
@@ -58,7 +53,6 @@ export function AppStateProvider({
     isRateLoading: false,
     exchangeOrder: null,
     screen: AppScreen.Home,
-    orderStatus: null,
   });
 
   const update = (state: Partial<AppState>) => {

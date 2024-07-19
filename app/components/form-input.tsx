@@ -1,5 +1,5 @@
 import { ChangeEventHandler } from "react";
-import Flex from "./flex";
+import Flex from "./ui/flex";
 import { Input, Text } from "@fedibtc/ui";
 
 export default function FormInput({
