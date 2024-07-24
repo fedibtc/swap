@@ -32,3 +32,6 @@ export const tokens = [
 ];
 
 export type Token = (typeof tokens)[number]["code"];
+
+export const minAmountSats = 50000;
+export const maxAmountSats = 25_000_000;

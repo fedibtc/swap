@@ -1,9 +1,7 @@
-import { AppStateFF, Direction, useAppState } from "@/app/components/app-state-provider";
+import { AppStateBoltzFromLn, AppStateBoltzToLn, Direction, useAppState } from "@/app/components/app-state-provider";
 import { Text, Button, Icon, useFediInjection, useToast } from "@fedibtc/ui";
 import QRCode from "react-qr-code";
 import { styled } from "react-tailwind-variants";
-import { useOrderStatus } from "../status-provider";
-import { tokens } from "@/lib/constants";
 import {
   Tabs,
   TabsContent,
@@ -11,26 +9,16 @@ import {
   TabsTrigger,
 } from "@/app/components/ui/tabs";
 import Flex from "@/app/components/ui/flex";
+import { ReverseSwapResponse, SubmarineSwapResponse } from "@/lib/types";
 
-export function PayNotice() {
-  const { coin, direction } = useAppState<AppStateFF>();
-  const { order } = useOrderStatus();
+export function PayNotice({ order }: { order: ReverseSwapResponse | SubmarineSwapResponse }) {
+  const { coin, direction } = useAppState<AppStateBoltzFromLn | AppStateBoltzToLn>();
   const { webln } = useFediInjection();
   const toast = useToast();
 
-  let invoice: null | string = null;
-  let address = order.from.address;
-  let amount = Number(order.from.amount);
-
-  if (direction === Direction.FromLightning) {
-    invoice = order.from.address;
-  } else {
-    let contractAddress = tokens.find((t) => t.code === order.from.code);
-
-    if (!contractAddress) return null;
-
-    invoice = `${contractAddress.network}:${contractAddress.contract_address}/transfer?address=${address}&uint256=${amount * 10 ** 6}`;
-  }
+  let invoice: null | string = 'bip21' in order ? order.bip21 : order.invoice;
+  let address = 'bip21' in order ? order.address : order.invoice;
+  let amount = 'bip21' in order ? order.expectedAmount : 0;
 
   const copyToClipboard = (text: string) => {
     return () => {
@@ -80,7 +68,7 @@ export function PayNotice() {
           <Flex col gap={2} align="center" className="mt-2">
             {direction === Direction.FromLightning ? (
               <Text className="text-center">
-                To complete the exchange, pay the following Lightning Invoice:
+                To complete the exchange, pay the followin Lightning Invoice:
               </Text>
             ) : (
               <Text className="text-center">
@@ -89,7 +77,7 @@ export function PayNotice() {
                   <span>{amount}</span>{" "}
                   <Icon icon="IconCopy" className="w-4 h-4 shrink-0" />
                 </CopyAmount>{" "}
-                {coin} to the following Address:
+                sats to the following Address:
               </Text>
             )}
             <QRCode value={address} size={200} />

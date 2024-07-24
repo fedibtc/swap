@@ -19,7 +19,7 @@ export default function SwapIndicator() {
     >
       <LightningIndicator />
       <SwitchIcon>
-        <Icon icon="IconSwitchHorizontal" className="h-4 w-4 shrink-0" />
+        <Icon icon="IconArrowRight" className="h-4 w-4 shrink-0" />
       </SwitchIcon>
       <CoinIndicator />
     </Flex>
@@ -27,13 +27,12 @@ export default function SwapIndicator() {
 }
 
 function LightningIndicator() {
-  const { currencies, isRateLoading } = useAppState();
+  const { currencies } = useAppState();
 
   const lightning = currencies.find((c) => c.code === "BTCLN");
 
   return (
     <IndicatorOuter
-      loading={isRateLoading}
       style={{
         borderColor: lightning?.color,
       }}
@@ -52,13 +51,12 @@ function LightningIndicator() {
 }
 
 function CoinIndicator() {
-  const { currencies, isRateLoading, coin } = useAppState();
+  const { currencies, coin } = useAppState();
 
   const currentCoin = currencies.find((c) => c.code === coin);
 
   return (
     <IndicatorOuter
-      loading={isRateLoading}
       style={{
         borderColor: coin === "ETH" ? "black" : currentCoin?.color,
       }}
@@ -77,12 +75,6 @@ function CoinIndicator() {
 
 export const IndicatorOuter = styled(Flex, {
   base: "flex grow basis-0 width-full gap-2 align-center p-2 rounded-lg border-2 border-solid px-md py-sm disabled:pointer-events-none",
-  variants: {
-    loading: {
-      true: "opacity-50",
-      false: "opacity-100",
-    },
-  },
 });
 
 export const CoinIcon = styled("img", {

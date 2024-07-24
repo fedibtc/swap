@@ -2,6 +2,7 @@ import { createOrder } from "@/app/actions/create-order";
 import { setOrderEmail } from "@/app/actions/set-email";
 import {
   AppScreen,
+  AppStateFF,
   Direction,
   useAppState,
 } from "@/app/components/app-state-provider";
@@ -10,19 +11,25 @@ import FormInput from "@/app/components/form-input";
 import { Button, Dialog, Icon, Scanner, Text, useToast } from "@fedibtc/ui";
 import { useEffect, useState } from "react";
 import { styled } from "react-tailwind-variants";
+import { PriceData } from "@/lib/ff/types";
 
-export default function FromLN() {
-  const { rate, direction, isRateLoading, coin, currencies, update } =
-    useAppState();
+export default function FromLN({
+  rate,
+  isRateLoading,
+}: {
+  rate: PriceData | null;
+  isRateLoading: boolean;
+}) {
+  const { direction, coin, currencies, update } = useAppState<AppStateFF>();
 
   const minAmountSats =
     direction === Direction.FromLightning
-      ? Number(rate.from.min) * 100000000
+      ? Number(rate?.from.min) * 100000000
       : 0;
 
   const maxAmountSats =
     direction === Direction.FromLightning
-      ? Number(rate.from.max) * 100000000
+      ? Number(rate?.from.max) * 100000000
       : 0;
 
   const [amount, setAmount] = useState<string>(String(minAmountSats));
@@ -34,7 +41,6 @@ export default function FromLN() {
   const toast = useToast();
 
   const currentCurrency = currencies.find((c) => c.code === coin);
-  const isBitcoin = coin === "BTC";
   const amountNumber = Number(amount);
 
   const handleScan = (data: string) => {
@@ -138,7 +144,7 @@ export default function FromLN() {
           label={`${currentCurrency?.network} Address`}
           value={address}
           onChange={(e) => setAddress(e.target.value)}
-          placeholder={isBitcoin ? "bc1..." : "0x..."}
+          placeholder={"0x..."}
           disabled={isRateLoading}
           inputRight={
             <ScannerButton onClick={() => setScanning(true)}>
@@ -184,10 +190,10 @@ export default function FromLN() {
   );
 }
 
-const ScannerButton = styled("button", {
+export const ScannerButton = styled("button", {
   base: "flex items-center justify-center border-solid border-2 border-lightGrey rounded-lg w-12 h-12 active:bg-extraLightGrey shrink-0",
 });
 
-const PasteButton = styled("button", {
+export const PasteButton = styled("button", {
   base: "flex w-full p-4 rounded-lg active:bg-extraLightGrey",
 });

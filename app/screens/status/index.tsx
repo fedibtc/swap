@@ -1,6 +1,6 @@
 "use client";
 
-import { Direction, useAppState } from "@/app/components/app-state-provider";
+import { AppStateFF, Direction, useAppState } from "@/app/components/app-state-provider";
 import { useCallback, useEffect, useState } from "react";
 import { Order, StatusStateProvider } from "./status-provider";
 import { getOrder } from "@/app/actions/order-status";
@@ -15,7 +15,7 @@ import PendingStatus from "./pending";
 import DoneStatus from "./done";
 
 export default function Status() {
-  const { exchangeOrder, direction } = useAppState();
+  const { exchangeOrder, direction } = useAppState<AppStateFF>();
   const { webln } = useFediInjection();
 
   const [order, setOrder] = useState<Order | null>(null);

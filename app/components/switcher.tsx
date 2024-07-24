@@ -34,7 +34,7 @@ export default function Switcher() {
 }
 
 function LightningIndicator() {
-  const { currencies, isRateLoading, update, direction } = useAppState();
+  const { currencies, update, direction } = useAppState();
 
   const lightning = currencies.find((c) => c.code === "BTCLN");
 
@@ -42,7 +42,6 @@ function LightningIndicator() {
     <IndicatorOuter
       style={{
         borderColor: lightning?.color,
-        opacity: isRateLoading ? 0.5 : 1,
       }}
       asChild
     >
@@ -71,11 +70,10 @@ function LightningIndicator() {
 }
 
 function SwitchButton() {
-  const { direction, update, isRateLoading } = useAppState();
+  const { direction, update } = useAppState();
 
   return (
     <CoinSwitchButton
-      disabled={isRateLoading}
       onClick={() =>
         update({
           direction:
@@ -91,14 +89,13 @@ function SwitchButton() {
 }
 
 function CoinIndicator() {
-  const { coin, update, currencies, isRateLoading } = useAppState();
+  const { coin, update, currencies } = useAppState();
 
   const currentCurrency = currencies.find((c) => c.code === coin);
 
   return (
     <Select value={coin} onValueChange={(coin) => update({ coin: coin })}>
       <CoinSelector
-        disabled={isRateLoading}
         style={{
           borderColor: coin === "ETH" ? "black" : currentCurrency?.color,
         }}

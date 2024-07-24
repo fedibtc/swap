@@ -1,18 +1,38 @@
 "use client";
 
-import { Currency, PriceData } from "@/lib/ff/types";
-import { createContext, useContext, useEffect, useState } from "react";
-import { getRate } from "../actions/get-rate";
+import { Currency } from "@/lib/ff/types";
+import { createContext, useContext, useState } from "react";
 
-interface AppState {
-  direction: Direction;
+interface AppStateBase {
   currencies: Array<Currency>;
-  rate: PriceData;
-  isRateLoading: boolean;
-  coin: string;
-  exchangeOrder: ExchangeData | null;
   screen: AppScreen;
 }
+
+export interface AppStateBoltzToLn extends AppStateBase {
+  direction: Direction.ToLightning;
+  coin: "BTC";
+  exchangeOrder: {
+    invoice: string;
+    amount: number;
+  } | null;
+}
+
+export interface AppStateBoltzFromLn extends AppStateBase {
+  direction: Direction.FromLightning;
+  coin: "BTC";
+  exchangeOrder: {
+    address: string;
+    amount: number;
+  } | null;
+}
+
+export interface AppStateFF extends AppStateBase {
+  direction: Direction;
+  coin: string;
+  exchangeOrder: ExchangeData | null;
+}
+
+type AppState = AppStateFF | AppStateBoltzToLn | AppStateBoltzFromLn;
 
 interface ExchangeData {
   id: string;
@@ -27,6 +47,8 @@ export enum Direction {
 export enum AppScreen {
   Home,
   Status,
+  ToLnStatus,
+  FromLnStatus
 }
 
 export const AppStateContext = createContext<
@@ -39,43 +61,24 @@ export const AppStateContext = createContext<
 export function AppStateProvider({
   children,
   currencies,
-  rate,
 }: {
   children: React.ReactNode;
   currencies: Array<Currency>;
-  rate: PriceData;
 }) {
   const [value, setValue] = useState<AppState>({
     direction: Direction.FromLightning,
     currencies,
-    rate,
     coin: "BTC",
-    isRateLoading: false,
     exchangeOrder: null,
     screen: AppScreen.Home,
-  });
+  } as AppState);
 
   const update = (state: Partial<AppState>) => {
     setValue((v) => ({
       ...v,
       ...state,
-    }));
+    } as AppState));
   };
-
-  useEffect(() => {
-    async function updateRate() {
-      update({ isRateLoading: true });
-      const rate =
-        value.direction === Direction.FromLightning
-          ? await getRate("BTCLN", value.coin)
-          : await getRate(value.coin, "BTCLN");
-
-      update({ rate });
-      update({ isRateLoading: false });
-    }
-
-    updateRate();
-  }, [value.direction, value.coin]);
 
   return (
     <AppStateContext.Provider value={{ ...value, update }}>
@@ -84,12 +87,12 @@ export function AppStateProvider({
   );
 }
 
-export function useAppState() {
+export function useAppState<T extends AppState = AppState>() {
   const context = useContext(AppStateContext);
 
   if (context === null) {
     throw new Error("useAppState() must be used within an AppStateProvider");
   }
 
-  return context;
+  return context as unknown as T & { update: (state: Partial<T>) => void };
 }

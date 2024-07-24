@@ -3,7 +3,7 @@ import { StatusBanner } from "@/app/components/ui/status-banner";
 import { Button, Icon, Text, useToast } from "@fedibtc/ui";
 import { useOrderStatus } from "../status-provider";
 import FormInput from "@/app/components/form-input";
-import { useAppState } from "@/app/components/app-state-provider";
+import { AppStateFF, useAppState } from "@/app/components/app-state-provider";
 import { useState } from "react";
 import { EmergencyStatus, OrderStatus } from "@/lib/ff/types";
 import { handleEmergency } from "@/app/actions/handle-emergency";
@@ -12,7 +12,7 @@ import { BorderContainer } from "../pending/pay-notice";
 import Image from "next/image";
 
 export default function EmergencyStatusComponent() {
-  const { coin, exchangeOrder } = useAppState();
+  const { coin, exchangeOrder } = useAppState<AppStateFF>();
   const {
     order: { emergency, status, email },
   } = useOrderStatus();

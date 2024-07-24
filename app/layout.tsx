@@ -7,7 +7,6 @@ import "./globals.css";
 import { AppStateProvider } from "./components/app-state-provider";
 import { fixedFloat } from "@/lib/ff";
 import { Suspense } from "react";
-import { getRate } from "./actions/get-rate";
 import Container from "./components/container";
 
 const albertSans = Albert_Sans({ subsets: ["latin"] });
@@ -68,10 +67,9 @@ export default function RootLayout({
 
 async function LoadedCurrencies({ children }: { children: React.ReactNode }) {
   const currencies = await fixedFloat.currencies();
-  const rate = await getRate("BTCLN", "BTC");
 
   return (
-    <AppStateProvider currencies={currencies.data} rate={rate}>
+    <AppStateProvider currencies={currencies.data}>
       {children}
     </AppStateProvider>
   );

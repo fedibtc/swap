@@ -1,3 +1,4 @@
+import { AxiosError } from "axios";
 import { ZodError, ZodIssue } from "zod";
 
 const formatZodIssue = (issue: ZodIssue): string => {
@@ -25,6 +26,10 @@ export const formatError = (error: Error | ZodError | unknown): string => {
 
   if (error instanceof ZodError) {
     return formatZodError(error);
+  }
+
+  if (error instanceof AxiosError) {
+    return error.message
   }
 
   return (error as Error).message;
