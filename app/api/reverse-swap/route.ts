@@ -216,3 +216,5 @@ export async function GET(req: Request) {
     return new Response(formatError(e), { status: 400 });
   }
 }
+
+export const dynamic = "force-dynamic";
