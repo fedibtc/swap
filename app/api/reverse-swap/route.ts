@@ -31,7 +31,7 @@ const paramsSchema = z.object({
 const endpoint = "https://api.boltz.exchange";
 
 export async function GET(req: Request) {
-  const ecc = await import("tiny-secp256k1");
+  const ecc = await import("@bitcoinerlab/secp256k1");
 
   try {
     const url = new URL(req.url);
