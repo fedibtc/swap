@@ -6,7 +6,6 @@ import bolt11 from "bolt11";
 import { Musig, SwapTreeSerializer, TaprootUtils } from "boltz-core";
 import { randomBytes } from "crypto";
 import { ECPairFactory } from "ecpair";
-import * as ecc from "tiny-secp256k1";
 import ws from "ws";
 import { z } from "zod";
 
@@ -17,6 +16,8 @@ const paramsSchema = z.object({
 const endpoint = "https://api.boltz.exchange";
 
 export async function GET(req: Request) {
+  const ecc = await import("tiny-secp256k1");
+
   try {
     const url = new URL(req.url);
 
