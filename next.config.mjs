@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    outputFileTracingIncludes: {
+      "/app/api": ["./node_modules/tiny-secp256k1/lib/*.wasm"],
+    },
+  },
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.experiments = {
@@ -9,11 +14,6 @@ const nextConfig = {
     }
     return config;
   },
-  experimental: {
-    outputFileTracingIncludes: {
-      "/api": ["./node_modules/tiny-secp256k1/lib/*.wasm"]
-    }
-  }
 };
 
 export default nextConfig;
