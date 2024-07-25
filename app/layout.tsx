@@ -69,8 +69,6 @@ async function LoadedCurrencies({ children }: { children: React.ReactNode }) {
   const currencies = await fixedFloat.currencies();
 
   return (
-    <AppStateProvider currencies={currencies.data}>
-      {children}
-    </AppStateProvider>
+    <AppStateProvider currencies={currencies.data}>{children}</AppStateProvider>
   );
 }

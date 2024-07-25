@@ -60,6 +60,19 @@ export default function LnToBtc() {
           type="number"
           inputMode="decimal"
           step="any"
+          description={
+            <>
+              Not including 10% exchange fee from{" "}
+              <a
+                href="https://boltz.exchange"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                Boltz
+              </a>
+            </>
+          }
           error={
             amountNumber < minAmountSats
               ? `Min ${minAmountSats} sats`

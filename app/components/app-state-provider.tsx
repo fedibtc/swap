@@ -48,7 +48,7 @@ export enum AppScreen {
   Home,
   Status,
   ToLnStatus,
-  FromLnStatus
+  FromLnStatus,
 }
 
 export const AppStateContext = createContext<
@@ -74,10 +74,13 @@ export function AppStateProvider({
   } as AppState);
 
   const update = (state: Partial<AppState>) => {
-    setValue((v) => ({
-      ...v,
-      ...state,
-    } as AppState));
+    setValue(
+      (v) =>
+        ({
+          ...v,
+          ...state,
+        }) as AppState,
+    );
   };
 
   return (

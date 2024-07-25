@@ -100,7 +100,19 @@ export default function ToLN({
       <Flex col gap={4} grow>
         <FormInput
           label={`Amount (${coin})`}
-          description="Not including 10% exchange fee"
+          description={
+            <>
+              Not including 10% exchange fee from{" "}
+              <a
+                href="https://ff.io"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                FixedFloat
+              </a>
+            </>
+          }
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           type="number"
@@ -117,7 +129,20 @@ export default function ToLN({
         />
         <FormInput
           label="Email Address (optional)"
-          description="Subscribe to updates from FixedFloat. Recommended for large exchanges."
+          description={
+            <>
+              Subscribe to updates from{" "}
+              <a
+                href="https://ff.io"
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                FixedFloat
+              </a>
+              . Recommended for large exchanges.
+            </>
+          }
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"

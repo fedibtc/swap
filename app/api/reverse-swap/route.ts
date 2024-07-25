@@ -22,6 +22,7 @@ import { randomBytes } from "crypto";
 import { ECPairFactory } from "ecpair";
 import ws from "ws";
 import { ReverseSwapMessage } from "./types";
+import ecc from "@bitcoinerlab/secp256k1";
 
 const paramsSchema = z.object({
   address: z.string(),
@@ -31,8 +32,6 @@ const paramsSchema = z.object({
 const endpoint = "https://api.boltz.exchange";
 
 export async function GET(req: Request) {
-  const ecc = await import("@bitcoinerlab/secp256k1");
-
   try {
     const url = new URL(req.url);
 
@@ -68,7 +67,7 @@ export async function GET(req: Request) {
         ).data;
 
         console.log(createdResponse);
-        console.log("Created Response")
+        console.log("Created Response");
 
         sendData({
           status: "created",
@@ -142,7 +141,6 @@ export async function GET(req: Request) {
                   fee,
                 ),
               );
-              console.log("pre-claim")
 
               // Get the partial signature from Boltz
               const boltzSig = (
@@ -158,8 +156,6 @@ export async function GET(req: Request) {
                   },
                 )
               ).data;
-
-              console.log("claimed")
 
               // Aggregate the nonces
               musig.aggregateNonces([

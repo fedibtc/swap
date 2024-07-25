@@ -12,7 +12,7 @@ export default function FormInput({
   ...inputProps
 }: {
   label: string;
-  description?: string;
+  description?: React.ReactNode;
   error?: string;
   value: string;
   onChange: ChangeEventHandler<HTMLInputElement>;

@@ -1,4 +1,8 @@
-import { AppStateFF, Direction, useAppState } from "@/app/components/app-state-provider";
+import {
+  AppStateFF,
+  Direction,
+  useAppState,
+} from "@/app/components/app-state-provider";
 import { Text, Button, Icon, useFediInjection, useToast } from "@fedibtc/ui";
 import QRCode from "react-qr-code";
 import { styled } from "react-tailwind-variants";

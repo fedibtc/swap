@@ -6,7 +6,7 @@ import {
 } from "@/app/components/app-state-provider";
 import Container from "@/app/components/container";
 import SwapIndicator from "@/app/components/swap-indicator";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Flex from "@/app/components/ui/flex";
 import { ProgressStep } from "../status/pending/step";
 import { StatusBanner } from "@/app/components/ui/status-banner";
@@ -25,6 +25,7 @@ export default function ToLnStatus() {
   const [status, setStatus] = useState<Status>("new");
   const [order, setOrder] = useState<SubmarineSwapResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const { exchangeOrder } = useAppState<AppStateBoltzToLn>();
 
   const determineStepStatus = (step: Status) => {
@@ -40,55 +41,44 @@ export default function ToLnStatus() {
   useEffect(() => {
     if (!exchangeOrder) return;
 
-    let eventSource: EventSource | null = null;
+    let ev: EventSource;
 
-    const connectEventSource = () => {
-      if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
-        console.log("EventSource already exists and is not closed");
-        return;
+    if (!eventSourceRef.current) {
+      eventSourceRef.current = new EventSource(
+        `/api/submarine-swap?invoice=${exchangeOrder.invoice}`,
+      );
+    }
+
+    ev = eventSourceRef.current;
+
+    ev.onmessage = (event) => {
+      const msg: SubmarineSwapMessage = JSON.parse(event.data);
+
+      console.log(msg);
+
+      if (msg.status === "created") {
+        setOrder(msg.data);
       }
 
-      eventSource = new EventSource(
-        `/api/submarine-swap?invoice=${exchangeOrder.invoice}&_=${Date.now()}`,
-      );
+      setStatus(msg.status);
 
-      eventSource.onopen = () => {
-        console.log("Connection opened");
-      };
-
-      eventSource.onmessage = (event) => {
-        const msg: SubmarineSwapMessage = JSON.parse(event.data);
-
-        console.log(msg);
-
-        if (msg.status === "created") {
-          setOrder(msg.data);
-        }
-
-        if (msg.status === "error") {
-          setError(msg.message);
-          eventSource?.close();
-          return;
-        }
-
-        setStatus(msg.status);
-
-        if (msg.status === "done") {
-          eventSource?.close();
-        }
-      };
-
-      eventSource.onerror = (error: Event) => {
-        console.error("EventSource error:", error);
-      };
+      if (msg.status === "done") {
+        ev.close();
+      }
     };
 
-    connectEventSource();
-
-    return () => {
-      eventSource?.close();
+    ev.onerror = (error: Event) => {
+      console.error("EventSource error:", error);
+      if (status === "new") {
+        setError("Failed to create swap");
+      } else if (status === "created") {
+        setError("Payment expired");
+      } else {
+        setError("An unknown error occurred");
+      }
+      ev.close();
     };
-  }, [exchangeOrder]);
+  }, [exchangeOrder, status]);
 
   return error ? (
     <Container>
@@ -144,7 +134,10 @@ export default function ToLnStatus() {
       {status === "pending" ? (
         <StatusBanner status="info" className="w-full">
           <Icon icon="IconInfoCircle" className="w-6 h-6 shrink-0" />
-          <Text>Block confirmations can take a while. You can close this page while the swap continues in the background.</Text>
+          <Text>
+            Block confirmations can take a while. You can close this page while
+            the swap continues in the background.
+          </Text>
         </StatusBanner>
       ) : null}
     </Container>

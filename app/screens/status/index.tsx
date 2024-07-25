@@ -1,6 +1,10 @@
 "use client";
 
-import { AppStateFF, Direction, useAppState } from "@/app/components/app-state-provider";
+import {
+  AppStateFF,
+  Direction,
+  useAppState,
+} from "@/app/components/app-state-provider";
 import { useCallback, useEffect, useState } from "react";
 import { Order, StatusStateProvider } from "./status-provider";
 import { getOrder } from "@/app/actions/order-status";
@@ -75,7 +79,7 @@ export default function Status() {
       direction === Direction.FromLightning &&
       order.status === OrderStatus.NEW
     ) {
-      webln.sendPayment(order.from.address);
+      webln.sendPayment(order.from.address).catch(() => {});
     }
   }, [direction, order, webln]);
 

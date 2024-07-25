@@ -6,11 +6,11 @@ import {
 } from "@/app/components/app-state-provider";
 import Container from "@/app/components/container";
 import SwapIndicator from "@/app/components/swap-indicator";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Flex from "@/app/components/ui/flex";
 import { ProgressStep } from "../status/pending/step";
 import { StatusBanner } from "@/app/components/ui/status-banner";
-import { Button, Icon, Text } from "@fedibtc/ui";
+import { Button, Icon, Text, useFediInjection } from "@fedibtc/ui";
 import { BorderContainer, PayNotice } from "./pay-notice";
 import { PaidNotice } from "../status/pending/paid-notice";
 import { ReverseSwapResponse } from "@/lib/types";
@@ -25,7 +25,9 @@ export default function FromLnStatus() {
   const [status, setStatus] = useState<Status>("new");
   const [order, setOrder] = useState<ReverseSwapResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const { exchangeOrder } = useAppState<AppStateBoltzFromLn>();
+  const { webln } = useFediInjection();
 
   const determineStepStatus = (step: Status) => {
     if (status === step) {
@@ -40,44 +42,48 @@ export default function FromLnStatus() {
   useEffect(() => {
     if (!exchangeOrder) return;
 
-    const eventSource = new EventSource(
-      `/api/reverse-swap?amount=${exchangeOrder.amount}&address=${exchangeOrder.address}`,
-    );
+    let ev: EventSource;
 
-    eventSource.onopen = () => {
-      console.log("Connection opened");
-    };
+    if (!eventSourceRef.current) {
+      eventSourceRef.current = new EventSource(
+        `/api/reverse-swap?amount=${exchangeOrder.amount}&address=${exchangeOrder.address}`,
+      );
+    }
 
-    eventSource.onmessage = (event) => {
+    ev = eventSourceRef.current;
+
+    ev.onmessage = (event) => {
       const msg: ReverseSwapMessage = JSON.parse(event.data);
-
-      console.log(msg);
 
       if (msg.status === "created") {
         setOrder(msg.data);
       }
 
-      if (msg.status === "error") {
-        setError(msg.message);
-        eventSource.close();
-        return;
-      }
-
       setStatus(msg.status);
 
       if (msg.status === "done") {
-        eventSource.close();
+        ev.close();
       }
     };
 
-    eventSource.onerror = (error) => {
+    ev.onerror = (error) => {
       console.error("EventSource error:", error);
+      if (status === "new") {
+        setError("Failed to create swap");
+      } else if (status === "created") {
+        setError("Payment expired");
+      } else {
+        setError("An unknown error occurred");
+      }
+      ev.close();
     };
+  }, [exchangeOrder, status]);
 
-    return () => {
-      eventSource.close();
-    };
-  }, [exchangeOrder]);
+  useEffect(() => {
+    if (!order) return;
+
+    webln.sendPayment(order.invoice).catch(() => {});
+  }, [order, webln]);
 
   return error ? (
     <Container>

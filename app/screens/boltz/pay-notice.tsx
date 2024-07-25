@@ -1,4 +1,9 @@
-import { AppStateBoltzFromLn, AppStateBoltzToLn, Direction, useAppState } from "@/app/components/app-state-provider";
+import {
+  AppStateBoltzFromLn,
+  AppStateBoltzToLn,
+  Direction,
+  useAppState,
+} from "@/app/components/app-state-provider";
 import { Text, Button, Icon, useFediInjection, useToast } from "@fedibtc/ui";
 import QRCode from "react-qr-code";
 import { styled } from "react-tailwind-variants";
@@ -11,14 +16,20 @@ import {
 import Flex from "@/app/components/ui/flex";
 import { ReverseSwapResponse, SubmarineSwapResponse } from "@/lib/types";
 
-export function PayNotice({ order }: { order: ReverseSwapResponse | SubmarineSwapResponse }) {
-  const { coin, direction } = useAppState<AppStateBoltzFromLn | AppStateBoltzToLn>();
+export function PayNotice({
+  order,
+}: {
+  order: ReverseSwapResponse | SubmarineSwapResponse;
+}) {
+  const { coin, direction } = useAppState<
+    AppStateBoltzFromLn | AppStateBoltzToLn
+  >();
   const { webln } = useFediInjection();
   const toast = useToast();
 
-  let invoice: null | string = 'bip21' in order ? order.bip21 : order.invoice;
-  let address = 'bip21' in order ? order.address : order.invoice;
-  let amount = 'bip21' in order ? order.expectedAmount : 0;
+  let invoice: null | string = "bip21" in order ? order.bip21 : order.invoice;
+  let address = "bip21" in order ? order.address : order.invoice;
+  let amount = "bip21" in order ? order.expectedAmount : 0;
 
   const copyToClipboard = (text: string) => {
     return () => {

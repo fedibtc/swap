@@ -29,7 +29,7 @@ export const formatError = (error: Error | ZodError | unknown): string => {
   }
 
   if (error instanceof AxiosError) {
-    return error.message
+    return error.message;
   }
 
   return (error as Error).message;
