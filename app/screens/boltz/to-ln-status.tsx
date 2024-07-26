@@ -15,23 +15,29 @@ import { BorderContainer, PayNotice } from "./pay-notice";
 import { PaidNotice } from "../status/pending/paid-notice";
 import { SubmarineSwapResponse } from "@/lib/types";
 import Image from "next/image";
-import { SubmarineSwapMessage } from "@/app/api/submarine-swap/types";
-
-const statusSteps = ["new", "created", "pending", "done"];
-
-type Status = (typeof statusSteps)[number];
+import zkpInit from "@vulpemventures/secp256k1-zkp";
+import axios from "axios";
+import { crypto, initEccLib } from "bitcoinjs-lib";
+import bolt11 from "bolt11";
+import { Musig, SwapTreeSerializer, TaprootUtils } from "boltz-core";
+import { randomBytes } from "crypto";
+import { ECPairFactory } from "ecpair";
+import { BoltzStatus, boltzEndpoint, boltzStatusSteps } from "@/lib/constants";
+import ecc from "@bitcoinerlab/secp256k1";
 
 export default function ToLnStatus() {
-  const [status, setStatus] = useState<Status>("new");
+  const [status, setStatus] = useState<BoltzStatus>("new");
   const [order, setOrder] = useState<SubmarineSwapResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const { exchangeOrder } = useAppState<AppStateBoltzToLn>();
 
-  const determineStepStatus = (step: Status) => {
+  const determineStepStatus = (step: BoltzStatus) => {
     if (status === step) {
       return "loading";
-    } else if (statusSteps.indexOf(status) > statusSteps.indexOf(step)) {
+    } else if (
+      boltzStatusSteps.indexOf(status) > boltzStatusSteps.indexOf(step)
+    ) {
       return "success";
     } else {
       return "idle";
@@ -39,45 +45,153 @@ export default function ToLnStatus() {
   };
 
   useEffect(() => {
-    if (!exchangeOrder) return;
+    async function startSwap() {
+      if (!exchangeOrder || status !== "new") return;
 
-    let ev: EventSource;
+      initEccLib(ecc);
 
-    if (!eventSourceRef.current) {
-      eventSourceRef.current = new EventSource(
-        `/api/submarine-swap?invoice=${exchangeOrder.invoice}`,
-      );
+      const keys = ECPairFactory(ecc).makeRandom();
+
+      // Create a Submarine Swap
+      const createdResponse = (
+        await axios.post(`${boltzEndpoint}/v2/swap/submarine`, {
+          invoice: exchangeOrder.invoice,
+          to: "BTC",
+          from: "BTC",
+          refundPublicKey: keys.publicKey.toString("hex"),
+        })
+      ).data;
+
+      setStatus("created");
+      setOrder(createdResponse);
+
+      console.log("Created swap");
+      console.log(createdResponse);
+
+      let webSocket: WebSocket;
+
+      if (!wsRef.current) {
+        wsRef.current = new WebSocket(
+          `${boltzEndpoint.replace("https://", "wss://")}/v2/ws`,
+        );
+      }
+
+      webSocket = wsRef.current;
+
+      webSocket.onopen = () => {
+        webSocket.send(
+          JSON.stringify({
+            op: "subscribe",
+            channel: "swap.update",
+            args: [createdResponse.id],
+          }),
+        );
+      };
+
+      webSocket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+
+        if (status === "new") {
+          setError("Failed to create swap");
+        } else if (status === "created") {
+          setError("Payment expired");
+        } else {
+          setError("An unknown error occurred");
+        }
+        webSocket.close();
+      };
+
+      webSocket.onmessage = async (message) => {
+        const msg = JSON.parse(message.data);
+        if (msg.event !== "update") {
+          return;
+        }
+
+        console.log(message);
+        console.log(msg);
+
+        switch (msg.args[0].status) {
+          case "transaction.mempool":
+            setStatus("pending");
+            break;
+          // Create a partial signature to allow Boltz to do a key path spend to claim the mainchain coins
+          case "transaction.claim.pending": {
+            // Get the information request to create a partial signature
+            const claimTxDetails = (
+              await axios.get(
+                `${boltzEndpoint}/v2/swap/submarine/${createdResponse.id}/claim`,
+              )
+            ).data;
+
+            // Verify that Boltz actually paid the invoice by comparing the preimage hash
+            // of the invoice to the SHA256 hash of the preimage from the response
+            const invoicePreimageHash = Buffer.from(
+              bolt11
+                .decode(exchangeOrder.invoice)
+                .tags.find((tag) => tag.tagName === "payment_hash")!
+                .data as string,
+              "hex",
+            );
+            if (
+              !crypto
+                .sha256(Buffer.from(claimTxDetails.preimage, "hex"))
+                .equals(invoicePreimageHash)
+            ) {
+              return;
+            }
+
+            const boltzPublicKey = Buffer.from(
+              createdResponse.claimPublicKey,
+              "hex",
+            );
+
+            // Create a musig signing instance
+            const musig = new Musig(await zkpInit(), keys, randomBytes(32), [
+              boltzPublicKey,
+              keys.publicKey,
+            ]);
+            // Tweak that musig with the Taptree of the swap scripts
+            TaprootUtils.tweakMusig(
+              musig,
+              SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree)
+                .tree,
+            );
+
+            // Aggregate the nonces
+            musig.aggregateNonces([
+              [boltzPublicKey, Buffer.from(claimTxDetails.pubNonce, "hex")],
+            ]);
+            // Initialize the session to sign the transaction hash from the response
+            musig.initializeSession(
+              Buffer.from(claimTxDetails.transactionHash, "hex"),
+            );
+
+            // Give our public nonce and the partial signature to Boltz
+            await axios.post(
+              `${boltzEndpoint}/v2/swap/submarine/${createdResponse.id}/claim`,
+              {
+                pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
+                partialSignature: Buffer.from(musig.signPartial()).toString(
+                  "hex",
+                ),
+              },
+            );
+
+            console.log("Claimed");
+            break;
+          }
+
+          case "transaction.claimed":
+            setStatus("done");
+            webSocket.close();
+            break;
+        }
+      };
     }
 
-    ev = eventSourceRef.current;
-
-    ev.onmessage = (event) => {
-      const msg: SubmarineSwapMessage = JSON.parse(event.data);
-
-      console.log(msg);
-
-      if (msg.status === "created") {
-        setOrder(msg.data);
-      }
-
-      setStatus(msg.status);
-
-      if (msg.status === "done") {
-        ev.close();
-      }
-    };
-
-    ev.onerror = (error: Event) => {
-      console.error("EventSource error:", error);
-      if (status === "new") {
-        setError("Failed to create swap");
-      } else if (status === "created") {
-        setError("Payment expired");
-      } else {
-        setError("An unknown error occurred");
-      }
-      ev.close();
-    };
+    if (exchangeOrder && status === "new") {
+      startSwap();
+    }
   }, [exchangeOrder, status]);
 
   return error ? (

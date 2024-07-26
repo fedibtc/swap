@@ -14,25 +14,44 @@ import { Button, Icon, Text, useFediInjection } from "@fedibtc/ui";
 import { BorderContainer, PayNotice } from "./pay-notice";
 import { PaidNotice } from "../status/pending/paid-notice";
 import { ReverseSwapResponse } from "@/lib/types";
-import { ReverseSwapMessage } from "@/app/api/reverse-swap/types";
 import Image from "next/image";
-
-const statusSteps = ["new", "created", "pending", "done"];
-
-type Status = (typeof statusSteps)[number];
+import zkpInit from "@vulpemventures/secp256k1-zkp";
+import axios from "axios";
+import {
+  Transaction,
+  address,
+  crypto,
+  initEccLib,
+  networks,
+} from "bitcoinjs-lib";
+import {
+  Musig,
+  OutputType,
+  SwapTreeSerializer,
+  TaprootUtils,
+  constructClaimTransaction,
+  detectSwap,
+  targetFee,
+} from "boltz-core";
+import { randomBytes } from "crypto";
+import { ECPairFactory } from "ecpair";
+import ecc from "@bitcoinerlab/secp256k1";
+import { BoltzStatus, boltzEndpoint, boltzStatusSteps } from "@/lib/constants";
 
 export default function FromLnStatus() {
-  const [status, setStatus] = useState<Status>("new");
+  const [status, setStatus] = useState<BoltzStatus>("new");
   const [order, setOrder] = useState<ReverseSwapResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const { exchangeOrder } = useAppState<AppStateBoltzFromLn>();
   const { webln } = useFediInjection();
 
-  const determineStepStatus = (step: Status) => {
+  const determineStepStatus = (step: BoltzStatus) => {
     if (status === step) {
       return "loading";
-    } else if (statusSteps.indexOf(status) > statusSteps.indexOf(step)) {
+    } else if (
+      boltzStatusSteps.indexOf(status) > boltzStatusSteps.indexOf(step)
+    ) {
       return "success";
     } else {
       return "idle";
@@ -40,43 +59,176 @@ export default function FromLnStatus() {
   };
 
   useEffect(() => {
-    if (!exchangeOrder) return;
+    async function startSwap() {
+      if (!exchangeOrder || status !== "new") return;
 
-    let ev: EventSource;
+      initEccLib(ecc);
 
-    if (!eventSourceRef.current) {
-      eventSourceRef.current = new EventSource(
-        `/api/reverse-swap?amount=${exchangeOrder.amount}&address=${exchangeOrder.address}`,
-      );
+      // Create a random preimage for the swap; has to have a length of 32 bytes
+      const preimage = randomBytes(32);
+      const keys = ECPairFactory(ecc).makeRandom();
+
+      // Create a Submarine Swap
+      const createdResponse = (
+        await axios.post(`${boltzEndpoint}/v2/swap/reverse`, {
+          invoiceAmount: exchangeOrder.amount,
+          to: "BTC",
+          from: "BTC",
+          claimPublicKey: keys.publicKey.toString("hex"),
+          preimageHash: crypto.sha256(preimage).toString("hex"),
+        })
+      ).data;
+
+      console.log(createdResponse);
+      console.log("Created Response");
+
+      setStatus("created");
+      setOrder(createdResponse);
+
+      let webSocket: WebSocket;
+
+      if (!wsRef.current) {
+        wsRef.current = new WebSocket(
+          `${boltzEndpoint.replace("https://", "wss://")}/v2/ws`,
+        );
+      }
+
+      webSocket = wsRef.current;
+
+      webSocket.onopen = () => {
+        webSocket.send(
+          JSON.stringify({
+            op: "subscribe",
+            channel: "swap.update",
+            args: [createdResponse.id],
+          }),
+        );
+      };
+
+      webSocket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+
+        if (status === "new") {
+          setError("Failed to create swap");
+        } else if (status === "created") {
+          setError("Payment expired");
+        } else {
+          setError("An unknown error occurred");
+        }
+
+        webSocket.close();
+      };
+
+      webSocket.onmessage = async (message) => {
+        const msg = JSON.parse(message.data);
+        if (msg.event !== "update") {
+          return;
+        }
+
+        switch (msg.args[0].status) {
+          case "transaction.mempool": {
+            setStatus("pending");
+
+            const boltzPublicKey = Buffer.from(
+              createdResponse.refundPublicKey,
+              "hex",
+            );
+
+            // Create a musig signing session and tweak it with the Taptree of the swap scripts
+            const musig = new Musig(await zkpInit(), keys, randomBytes(32), [
+              boltzPublicKey,
+              keys.publicKey,
+            ]);
+            const tweakedKey = TaprootUtils.tweakMusig(
+              musig,
+              SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree)
+                .tree,
+            );
+
+            // Parse the lockup transaction and find the output relevant for the swap
+            const lockupTx = Transaction.fromHex(msg.args[0].transaction.hex);
+            const swapOutput = detectSwap(tweakedKey, lockupTx);
+            if (swapOutput === undefined) {
+              return;
+            }
+
+            // Create a claim transaction to be signed cooperatively via a key path spend
+            const claimTx = targetFee(2, (fee) =>
+              constructClaimTransaction(
+                [
+                  {
+                    ...swapOutput,
+                    keys,
+                    preimage,
+                    cooperative: true,
+                    type: OutputType.Taproot,
+                    txHash: lockupTx.getHash(),
+                  },
+                ],
+                address.toOutputScript(exchangeOrder.address, networks.bitcoin),
+                fee,
+              ),
+            );
+
+            // Get the partial signature from Boltz
+            const boltzSig = (
+              await axios.post(
+                `${boltzEndpoint}/v2/swap/reverse/${createdResponse.id}/claim`,
+                {
+                  index: 0,
+                  transaction: claimTx.toHex(),
+                  preimage: preimage.toString("hex"),
+                  pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
+                },
+              )
+            ).data;
+
+            // Aggregate the nonces
+            musig.aggregateNonces([
+              [boltzPublicKey, Buffer.from(boltzSig.pubNonce, "hex")],
+            ]);
+
+            // Initialize the session to sign the claim transaction
+            musig.initializeSession(
+              claimTx.hashForWitnessV1(
+                0,
+                [swapOutput.script],
+                [swapOutput.value],
+                Transaction.SIGHASH_DEFAULT,
+              ),
+            );
+
+            // Add the partial signature from Boltz
+            musig.addPartial(
+              boltzPublicKey,
+              Buffer.from(boltzSig.partialSignature, "hex"),
+            );
+
+            // Create our partial signature
+            musig.signPartial();
+
+            // Witness of the input to the aggregated signature
+            claimTx.ins[0].witness = [musig.aggregatePartials()];
+
+            // Broadcast the finalized transaction
+            await axios.post(`${boltzEndpoint}/v2/chain/BTC/transaction`, {
+              hex: claimTx.toHex(),
+            });
+
+            break;
+          }
+
+          case "invoice.settled":
+            setStatus("done");
+            webSocket.close();
+            break;
+        }
+      };
     }
 
-    ev = eventSourceRef.current;
-
-    ev.onmessage = (event) => {
-      const msg: ReverseSwapMessage = JSON.parse(event.data);
-
-      if (msg.status === "created") {
-        setOrder(msg.data);
-      }
-
-      setStatus(msg.status);
-
-      if (msg.status === "done") {
-        ev.close();
-      }
-    };
-
-    ev.onerror = (error) => {
-      console.error("EventSource error:", error);
-      if (status === "new") {
-        setError("Failed to create swap");
-      } else if (status === "created") {
-        setError("Payment expired");
-      } else {
-        setError("An unknown error occurred");
-      }
-      ev.close();
-    };
+    if (exchangeOrder && status === "new") {
+      startSwap();
+    }
   }, [exchangeOrder, status]);
 
   useEffect(() => {
