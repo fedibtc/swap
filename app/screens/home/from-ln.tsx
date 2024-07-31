@@ -127,7 +127,7 @@ export default function FromLN({
           label="Amount (Sats)"
           description={
             <>
-              Not including 10% exchange fee from{" "}
+              Not including 1% network exchange fee from{" "}
               <a
                 href="https://ff.io"
                 target="_blank"

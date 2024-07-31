@@ -47,7 +47,7 @@ export default function BtcToLn() {
           step="any"
           description={
             <>
-              Not including 10% exchange fee from{" "}
+              Not including 0.1% exchange fee from{" "}
               <a
                 href="https://boltz.exchange"
                 target="_blank"
