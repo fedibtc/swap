@@ -11,18 +11,11 @@ import Container from "./components/container";
 
 const albertSans = Albert_Sans({ subsets: ["latin"] });
 
-const env = process.env.NEXT_PUBLIC_ENV;
 
 export const metadata: Metadata = {
   title: `Swap`,
   description: "Swap",
-  icons: [
-    env === "production"
-      ? "logo.png"
-      : env === "preview"
-        ? "logo-preview.png"
-        : "logo-dev.png",
-  ],
+  icons: ["logo.png"]
 };
 
 export default function RootLayout({
