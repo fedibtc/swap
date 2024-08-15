@@ -11,11 +11,10 @@ import Container from "./components/container";
 
 const albertSans = Albert_Sans({ subsets: ["latin"] });
 
-
 export const metadata: Metadata = {
   title: `Swap`,
   description: "Swap",
-  icons: ["logo.png"]
+  icons: ["logo.png"],
 };
 
 export default function RootLayout({

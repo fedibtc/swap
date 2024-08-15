@@ -35,6 +35,9 @@ export default function BtcToLn() {
     }
   };
 
+  const isAmountValid =
+    amountNumber >= minAmountSats && amountNumber <= maxAmountSats;
+
   return (
     <Flex col gap={4} width="full" grow>
       <Flex col gap={4} grow>
@@ -67,7 +70,9 @@ export default function BtcToLn() {
           }
         />
       </Flex>
-      <Button onClick={handleSubmit}>Exchange</Button>
+      <Button onClick={handleSubmit} disabled={!isAmountValid}>
+        Exchange
+      </Button>
     </Flex>
   );
 }

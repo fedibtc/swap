@@ -104,6 +104,9 @@ export default function FromLN({
     }
   };
 
+  const isAmountValid =
+    amountNumber >= minAmountSats && amountNumber <= maxAmountSats;
+
   useEffect(() => {
     if (direction === Direction.FromLightning) {
       setAmount((a) => {
@@ -188,7 +191,11 @@ export default function FromLN({
         />
       </Flex>
       <Flex col>
-        <Button onClick={handleSubmit} loading={isSubmitting}>
+        <Button
+          onClick={handleSubmit}
+          loading={isSubmitting}
+          disabled={!isAmountValid}
+        >
           Exchange
         </Button>
       </Flex>

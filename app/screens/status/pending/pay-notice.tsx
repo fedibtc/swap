@@ -33,7 +33,9 @@ export function PayNotice() {
 
     if (!contractAddress) return null;
 
-    invoice = `${contractAddress.network}:${contractAddress.contract_address}/transfer?address=${address}&uint256=${amount * 10 ** 6}`;
+    invoice = `${contractAddress.network}:${
+      contractAddress.contract_address
+    }/transfer?address=${address}&uint256=${amount * 10 ** 6}`;
   }
 
   const copyToClipboard = (text: string) => {

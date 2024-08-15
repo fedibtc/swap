@@ -95,6 +95,9 @@ export default function ToLN({
       });
     }
   }, [direction, minAmount, maxAmount]);
+
+  const isAmountValid = amountNumber >= minAmount && amountNumber <= maxAmount;
+
   return (
     <Flex col gap={4} width="full" grow>
       <Flex col gap={4} grow>
@@ -151,7 +154,11 @@ export default function ToLN({
         />
       </Flex>
       <Flex col>
-        <Button onClick={handleSubmit} loading={isOrdering}>
+        <Button
+          onClick={handleSubmit}
+          loading={isOrdering}
+          disabled={!isAmountValid}
+        >
           Exchange
         </Button>
       </Flex>
