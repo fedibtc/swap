@@ -11,7 +11,7 @@ export async function setOrderEmail(
     const res = await fixedFloat.setEmail(args);
 
     if (res.code > 0) {
-      throw new Error(res.msg);
+      throw new Error("FixedFloat Error: " + res.msg);
     }
 
     return { success: true };

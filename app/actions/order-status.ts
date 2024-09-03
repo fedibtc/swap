@@ -16,6 +16,10 @@ export async function getOrder(
       token,
     });
 
+    if (res.code > 0) {
+      throw new Error("FixedFloat Error: " + res.msg);
+    }
+
     return { success: true, data: res.data };
   } catch (e) {
     return { success: false, message: formatError(e) };
