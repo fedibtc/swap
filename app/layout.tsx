@@ -8,6 +8,7 @@ import { AppStateProvider } from "./components/app-state-provider";
 import { fixedFloat } from "@/lib/ff";
 import { Suspense } from "react";
 import Container from "./components/container";
+import { Currency } from "@/lib/ff/types";
 
 const albertSans = Albert_Sans({ subsets: ["latin"] });
 
@@ -58,9 +59,26 @@ export default function RootLayout({
 }
 
 async function LoadedCurrencies({ children }: { children: React.ReactNode }) {
-  const currencies = await fixedFloat.currencies();
+  let currencies: Array<Currency> | null = null;
+
+  try {
+    currencies = await new Promise(async (resolve, reject) => {
+      setTimeout(() => reject(new Error("timeout")), 5000);
+      const currencies = await fixedFloat.currencies()
+
+      if (Array.isArray(currencies.data)) {
+        resolve(currencies.data);
+      } else {
+        throw new Error("invalid currencies");
+      }
+    });
+  } catch (e) {
+    /* no-op */
+  }
 
   return (
-    <AppStateProvider currencies={currencies.data}>{children}</AppStateProvider>
+    <AppStateProvider currencies={currencies || null}>
+      {children}
+    </AppStateProvider>
   );
 }

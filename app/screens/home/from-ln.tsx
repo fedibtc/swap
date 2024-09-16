@@ -12,6 +12,8 @@ import { Button, Dialog, Icon, Scanner, Text, useToast } from "@fedibtc/ui";
 import { useEffect, useState } from "react";
 import { styled } from "react-tailwind-variants";
 import { PriceData } from "@/lib/ff/types";
+import { StatusBanner } from "@/app/components/ui/status-banner";
+import { currencyStats } from "@/lib/constants";
 
 export default function FromLN({
   rate,
@@ -20,7 +22,12 @@ export default function FromLN({
   rate: PriceData | null;
   isRateLoading: boolean;
 }) {
-  const { direction, coin, currencies, update } = useAppState<AppStateFF>();
+  const {
+    direction,
+    coin,
+    update,
+    isFFBroken,
+  } = useAppState<AppStateFF>();
 
   const minAmountSats =
     direction === Direction.FromLightning
@@ -40,7 +47,7 @@ export default function FromLN({
 
   const toast = useToast();
 
-  const currentCurrency = currencies.find((c) => c.code === coin);
+  const currentCurrency = currencyStats.find((c) => c?.code === coin);
   const amountNumber = Number(amount);
 
   const handleScan = (data: string) => {
@@ -116,12 +123,25 @@ export default function FromLN({
           amt < minAmountSats
             ? minAmountSats
             : amt > maxAmountSats
-              ? maxAmountSats
-              : amt,
+            ? maxAmountSats
+            : amt
         );
       });
     }
   }, [direction, minAmountSats, maxAmountSats]);
+
+  if (isFFBroken)
+    return (
+      <StatusBanner status="warning">
+        <Text>
+          The FixedFloat API is currently unavailable. For more updates, please
+          check{" "}
+          <a href="https://ff.io" target="_blank" className="underline">
+            ff.io
+          </a>
+        </Text>
+      </StatusBanner>
+    );
 
   return (
     <Flex col gap={4} width="full" grow>
@@ -150,8 +170,8 @@ export default function FromLN({
             amountNumber < minAmountSats
               ? `Min ${minAmountSats} sats`
               : amountNumber > maxAmountSats
-                ? `Max ${maxAmountSats} sats`
-                : undefined
+              ? `Max ${maxAmountSats} sats`
+              : undefined
           }
           disabled={isRateLoading}
         />

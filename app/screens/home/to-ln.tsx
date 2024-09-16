@@ -9,9 +9,10 @@ import {
 } from "@/app/components/app-state-provider";
 import Flex from "@/app/components/ui/flex";
 import FormInput from "@/app/components/form-input";
-import { Button, useFediInjection, useToast } from "@fedibtc/ui";
+import { Button, Text, useFediInjection, useToast } from "@fedibtc/ui";
 import { useEffect, useState } from "react";
 import { PriceData } from "@/lib/ff/types";
+import { StatusBanner } from "@/app/components/ui/status-banner";
 
 export default function ToLN({
   rate,
@@ -20,7 +21,7 @@ export default function ToLN({
   rate: PriceData | null;
   isRateLoading: boolean;
 }) {
-  const { direction, coin, update } = useAppState<AppStateFF>();
+  const { direction, coin, update, isFFBroken } = useAppState<AppStateFF>();
   const { webln } = useFediInjection();
   const toast = useToast();
 
@@ -90,13 +91,26 @@ export default function ToLN({
         const amt = Number(a);
 
         return String(
-          amt < minAmount ? minAmount : amt > maxAmount ? maxAmount : amt,
+          amt < minAmount ? minAmount : amt > maxAmount ? maxAmount : amt
         );
       });
     }
   }, [direction, minAmount, maxAmount]);
 
   const isAmountValid = amountNumber >= minAmount && amountNumber <= maxAmount;
+
+  if (isFFBroken)
+    return (
+      <StatusBanner status="warning">
+        <Text>
+          The FixedFloat API is currently unavailable. For more updates, please
+          check{" "}
+          <a href="https://ff.io" target="_blank" className="underline">
+            ff.io
+          </a>
+        </Text>
+      </StatusBanner>
+    );
 
   return (
     <Flex col gap={4} width="full" grow>
@@ -125,8 +139,8 @@ export default function ToLN({
             amountNumber < minAmount
               ? `Min ${minAmount} ${coin}`
               : amountNumber > maxAmount
-                ? `Max ${maxAmount} ${coin}`
-                : undefined
+              ? `Max ${maxAmount} ${coin}`
+              : undefined
           }
           disabled={isRateLoading}
         />

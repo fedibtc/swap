@@ -7,7 +7,7 @@ import { Text, Button, Icon, useFediInjection, useToast } from "@fedibtc/ui";
 import QRCode from "react-qr-code";
 import { styled } from "react-tailwind-variants";
 import { useOrderStatus } from "../status-provider";
-import { tokens } from "@/lib/constants";
+import { currencyStats } from "@/lib/constants";
 import {
   Tabs,
   TabsContent,
@@ -29,12 +29,12 @@ export function PayNotice() {
   if (direction === Direction.FromLightning) {
     invoice = order.from.address;
   } else {
-    let contractAddress = tokens.find((t) => t.code === order.from.code);
+    let toCurrency = currencyStats.find((t) => t.code === order.from.code);
 
-    if (!contractAddress) return null;
+    if (!toCurrency) return null;
 
-    invoice = `${contractAddress.network}:${
-      contractAddress.contract_address
+    invoice = `${toCurrency.network}:${
+      toCurrency.contractAddress
     }/transfer?address=${address}&uint256=${amount * 10 ** 6}`;
   }
 

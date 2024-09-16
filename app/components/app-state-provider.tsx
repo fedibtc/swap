@@ -4,8 +4,8 @@ import { Currency } from "@/lib/ff/types";
 import { createContext, useContext, useState } from "react";
 
 interface AppStateBase {
-  currencies: Array<Currency>;
   screen: AppScreen;
+  isFFBroken: boolean;
 }
 
 export interface AppStateBoltzToLn extends AppStateBase {
@@ -63,11 +63,10 @@ export function AppStateProvider({
   currencies,
 }: {
   children: React.ReactNode;
-  currencies: Array<Currency>;
+  currencies: Array<Currency> | null;
 }) {
   const [value, setValue] = useState<AppState>({
     direction: Direction.FromLightning,
-    currencies,
     coin: "BTC",
     exchangeOrder: null,
     screen: AppScreen.Home,
@@ -84,7 +83,7 @@ export function AppStateProvider({
   };
 
   return (
-    <AppStateContext.Provider value={{ ...value, update }}>
+    <AppStateContext.Provider value={{ ...value, update, isFFBroken: currencies === null }}>
       {children}
     </AppStateContext.Provider>
   );

@@ -2,6 +2,7 @@ import { Icon, Text } from "@fedibtc/ui";
 import { Direction, useAppState } from "./app-state-provider";
 import Flex from "./ui/flex";
 import { styled } from "react-tailwind-variants";
+import { currencyStats } from "@/lib/constants";
 
 export default function SwapIndicator() {
   const { direction } = useAppState();
@@ -27,9 +28,7 @@ export default function SwapIndicator() {
 }
 
 function LightningIndicator() {
-  const { currencies } = useAppState();
-
-  const lightning = currencies.find((c) => c.code === "BTCLN");
+  const lightning = currencyStats.find((c) => c.code === "BTCLN");
 
   return (
     <IndicatorOuter
@@ -51,14 +50,14 @@ function LightningIndicator() {
 }
 
 function CoinIndicator() {
-  const { currencies, coin } = useAppState();
+  const { coin } = useAppState();
 
-  const currentCoin = currencies.find((c) => c.code === coin);
+  const currentCoin = currencyStats.find((c) => c.code === coin);
 
   return (
     <IndicatorOuter
       style={{
-        borderColor: coin === "ETH" ? "black" : currentCoin?.color,
+        borderColor: currentCoin?.color,
       }}
     >
       <CoinIcon

@@ -8,7 +8,7 @@ import {
   SelectValue,
   SelectTrigger,
 } from "./ui/select";
-import { tokens } from "@/lib/constants";
+import { currencyStats } from "@/lib/constants";
 import { styled } from "react-tailwind-variants";
 import { CoinIcon, IndicatorOuter } from "./swap-indicator";
 
@@ -34,14 +34,12 @@ export default function Switcher() {
 }
 
 function LightningIndicator() {
-  const { currencies, update, direction } = useAppState();
-
-  const lightning = currencies.find((c) => c.code === "BTCLN");
+  const { update, direction } = useAppState();
 
   return (
     <IndicatorOuter
       style={{
-        borderColor: lightning?.color,
+        borderColor: "#9157ff",
       }}
       asChild
     >
@@ -57,10 +55,10 @@ function LightningIndicator() {
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <CoinIcon
-          src={lightning?.logo}
+          src="https://ff.io/assets/images/coins/svg/btcln.svg"
           alt="Icon"
           style={{
-            borderColor: lightning?.color,
+            borderColor: "#9157ff",
           }}
         />
         <Text variant="caption">Lightning ⚡</Text>
@@ -89,9 +87,9 @@ function SwitchButton() {
 }
 
 function CoinIndicator() {
-  const { coin, update, currencies } = useAppState();
+  const { coin, update } = useAppState();
 
-  const currentCurrency = currencies.find((c) => c.code === coin);
+  const currentCurrency = currencyStats.find((c) => c.code === coin);
 
   return (
     <Select value={coin} onValueChange={(coin) => update({ coin: coin })}>
@@ -103,17 +101,15 @@ function CoinIndicator() {
         <SelectValue placeholder="Select coin" />
       </CoinSelector>
       <SelectContent>
-        {tokens
-          .filter((token) => currencies.find((c) => c.code === token.code))
+        {currencyStats
           .map((token) => (
             <SelectItem key={token.code} value={token.code}>
               <Flex row gap={2} align="center">
                 <CoinIcon
-                  src={currencies.find((c) => c.code === token.code)?.logo}
+                  src={token.logo}
                   alt="Icon"
                   style={{
-                    borderColor: currencies.find((c) => c.code === token.code)
-                      ?.color,
+                    borderColor: token.color,
                   }}
                 />
                 <Text className="grow whitespace-nowrap" variant="caption">
