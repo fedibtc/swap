@@ -4,11 +4,12 @@ import type { Metadata } from "next";
 import { Albert_Sans } from "next/font/google";
 import Fallback from "./components/fallback";
 import "./globals.css";
-import { AppStateProvider } from "./components/app-state-provider";
+import { AppStateProvider, BoltzFromLnRate, BoltzToLnRate } from "./components/app-state-provider";
 import { fixedFloat } from "@/lib/ff";
 import { Suspense } from "react";
 import Container from "./components/container";
 import { Currency } from "@/lib/ff/types";
+import { boltzEndpoint } from "@/lib/constants";
 
 const albertSans = Albert_Sans({ subsets: ["latin"] });
 
@@ -60,6 +61,8 @@ export default function RootLayout({
 
 async function LoadedCurrencies({ children }: { children: React.ReactNode }) {
   let currencies: Array<Currency> | null = null;
+  let boltzToLnRate: BoltzToLnRate | null = null;
+  let boltzFromLnRate: BoltzFromLnRate | null = null;
 
   try {
     currencies = await new Promise(async (resolve, reject) => {
@@ -72,12 +75,24 @@ async function LoadedCurrencies({ children }: { children: React.ReactNode }) {
         throw new Error("invalid currencies");
       }
     });
-  } catch (e) {
+  } catch {
+    /* no-op */
+  }
+
+  try {
+    boltzToLnRate = (await fetch(`${boltzEndpoint}/v2/swap/submarine`).then((res) => res.json())).BTC.BTC
+  } catch {
+    /* no-op */
+  }
+
+  try {
+    boltzFromLnRate = (await fetch(`${boltzEndpoint}/v2/swap/reverse`).then((res) => res.json())).BTC.BTC
+  } catch {
     /* no-op */
   }
 
   return (
-    <AppStateProvider currencies={currencies || null}>
+    <AppStateProvider currencies={currencies || null} boltzToLnRate={boltzToLnRate} boltzFromLnRate={boltzFromLnRate}>
       {children}
     </AppStateProvider>
   );

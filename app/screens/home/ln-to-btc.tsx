@@ -11,11 +11,20 @@ import { useState } from "react";
 import { PasteButton, ScannerButton } from "./from-ln";
 
 export default function LnToBtc() {
-  const { update } = useAppState<AppStateBoltzFromLn>();
-  const [amount, setAmount] = useState<string>(String(minAmountSats));
+  const { update, boltzFromLnRate } = useAppState<AppStateBoltzFromLn>();
   const [address, setAddress] = useState("");
   const [scanning, setScanning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  let minAmount = minAmountSats;
+  let maxAmount = maxAmountSats;
+
+  if (boltzFromLnRate) {
+    minAmount = boltzFromLnRate.limits.minimal;
+    maxAmount = boltzFromLnRate.limits.maximal;
+  }
+
+  const [amount, setAmount] = useState<string>(String(minAmount));
 
   const amountNumber = Number(amount);
 
@@ -51,7 +60,7 @@ export default function LnToBtc() {
   };
 
   const isAmountValid =
-    amountNumber >= minAmountSats && amountNumber <= maxAmountSats;
+    amountNumber >= minAmount && amountNumber <= maxAmount;
 
   return (
     <Flex col gap={4} width="full" grow>
@@ -77,11 +86,11 @@ export default function LnToBtc() {
             </>
           }
           error={
-            amountNumber < minAmountSats
-              ? `Min ${minAmountSats} sats`
-              : amountNumber > maxAmountSats
-                ? `Max ${maxAmountSats} sats`
-                : undefined
+            amountNumber < minAmount
+              ? `Min ${minAmount} sats`
+              : amountNumber > maxAmount
+              ? `Max ${maxAmount} sats`
+              : undefined
           }
         />
         <FormInput

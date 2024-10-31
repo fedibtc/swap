@@ -10,9 +10,18 @@ import { Button, useFediInjection, useToast } from "@fedibtc/ui";
 import { useState } from "react";
 
 export default function BtcToLn() {
-  const { update } = useAppState<AppStateBoltzToLn>();
+  const { update, boltzToLnRate } = useAppState<AppStateBoltzToLn>();
+
+  let minAmount = minAmountSats;
+  let maxAmount = maxAmountSats;
+
+  if (boltzToLnRate) {
+    minAmount = boltzToLnRate.limits.minimal + (boltzToLnRate.limits.minimal * boltzToLnRate.fees.percentage / 100) + boltzToLnRate.fees.minerFees;
+    maxAmount = boltzToLnRate.limits.maximal + (boltzToLnRate.limits.maximal * boltzToLnRate.fees.percentage / 100) + boltzToLnRate.fees.minerFees;
+  }
+
   const { webln } = useFediInjection();
-  const [amount, setAmount] = useState<string>(String(minAmountSats));
+  const [amount, setAmount] = useState<string>(String(minAmount));
   const toast = useToast();
 
   const amountNumber = Number(amount);
@@ -36,7 +45,7 @@ export default function BtcToLn() {
   };
 
   const isAmountValid =
-    amountNumber >= minAmountSats && amountNumber <= maxAmountSats;
+    amountNumber >= minAmount && amountNumber <= maxAmount;
 
   return (
     <Flex col gap={4} width="full" grow>
@@ -62,10 +71,10 @@ export default function BtcToLn() {
             </>
           }
           error={
-            amountNumber < minAmountSats
-              ? `Min ${minAmountSats} sats`
-              : amountNumber > maxAmountSats
-                ? `Max ${maxAmountSats} sats`
+            amountNumber < minAmount
+              ? `Min ${minAmount} sats`
+              : amountNumber > maxAmount
+                ? `Max ${maxAmount} sats`
                 : undefined
           }
         />

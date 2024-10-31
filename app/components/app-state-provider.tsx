@@ -6,6 +6,38 @@ import { createContext, useContext, useState } from "react";
 interface AppStateBase {
   screen: AppScreen;
   isFFBroken: boolean;
+  boltzToLnRate: BoltzToLnRate | null;
+  boltzFromLnRate: BoltzFromLnRate | null;
+}
+
+export interface BoltzToLnRate {
+  hash: string;
+  rate: number;
+  limits: {
+    maximal: number;
+    minimal: number;
+    maximalZeroConf: number;
+  };
+  fees: {
+    percentage: number;
+    minerFees: number;
+  };
+}
+
+export interface BoltzFromLnRate {
+  hash: string;
+  rate: number;
+  limits: {
+    maximal: number;
+    minimal: number;
+  };
+  fees: {
+    percentage: number;
+    minerFees: {
+      claim: number;
+      lockup: number;
+    };
+  };
 }
 
 export interface AppStateBoltzToLn extends AppStateBase {
@@ -61,9 +93,13 @@ export const AppStateContext = createContext<
 export function AppStateProvider({
   children,
   currencies,
+  boltzToLnRate,
+  boltzFromLnRate,
 }: {
   children: React.ReactNode;
   currencies: Array<Currency> | null;
+    boltzToLnRate: BoltzToLnRate | null;
+    boltzFromLnRate: BoltzFromLnRate | null;
 }) {
   const [value, setValue] = useState<AppState>({
     direction: Direction.FromLightning,
@@ -78,12 +114,14 @@ export function AppStateProvider({
         ({
           ...v,
           ...state,
-        }) as AppState,
+        } as AppState)
     );
   };
 
   return (
-    <AppStateContext.Provider value={{ ...value, update, isFFBroken: currencies === null }}>
+    <AppStateContext.Provider
+      value={{ ...value, update, isFFBroken: currencies === null, boltzToLnRate, boltzFromLnRate }}
+    >
       {children}
     </AppStateContext.Provider>
   );
