@@ -10,24 +10,23 @@ import { Order, StatusStateProvider } from "./status-provider";
 import { getOrder } from "@/app/actions/order-status";
 import { formatError } from "@/lib/errors";
 import Container from "@/app/components/container";
-import { Icon, Text, useFediInjection } from "@fedibtc/ui";
-import SwapIndicator from "@/app/components/swap-indicator";
+import { Icon, Text } from "@fedibtc/ui";
 import { OrderStatus } from "@/lib/ff/types";
 import ExpiredStatus from "./expired";
 import EmergencyStatusComponent from "./emergency";
 import PendingStatus from "./pending";
 import DoneStatus from "./done";
+import CoinHeader from "@/app/components/coin-header";
 
 export default function Status() {
-  const { exchangeOrder, direction } = useAppState<AppStateFF>();
-  const { webln } = useFediInjection();
+  const { exchangeOrder, direction, webln } = useAppState<AppStateFF>();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string>();
 
   const pollOrder = useCallback(async () => {
     if (!exchangeOrder || !order) return;
-
+ 
     const res = await getOrder(exchangeOrder.id, exchangeOrder.token);
 
     if (res.success) {
@@ -77,7 +76,8 @@ export default function Status() {
     if (
       order &&
       direction === Direction.FromLightning &&
-      order.status === OrderStatus.NEW
+      order.status === OrderStatus.NEW &&
+      webln
     ) {
       webln.sendPayment(order.from.address).catch(() => {});
     }
@@ -86,7 +86,7 @@ export default function Status() {
   return order ? (
     <StatusStateProvider order={order}>
       <Container className="p-4">
-        <SwapIndicator />
+        <CoinHeader />
         {order.status === OrderStatus.EXPIRED ? (
           <ExpiredStatus />
         ) : order.status === OrderStatus.EMERGENCY ? (

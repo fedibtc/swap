@@ -1,10 +1,13 @@
-import { FediInjectionProvider, Icon, Text, ToastProvider } from "@fedibtc/ui";
+import { Icon, Text, ToastProvider } from "@fedibtc/ui";
 import "@fedibtc/ui/dist/index.css";
 import type { Metadata } from "next";
 import { Albert_Sans } from "next/font/google";
-import Fallback from "./components/fallback";
 import "./globals.css";
-import { AppStateProvider, BoltzFromLnRate, BoltzToLnRate } from "./components/app-state-provider";
+import {
+  AppStateProvider,
+  BoltzFromLnRate,
+  BoltzToLnRate,
+} from "./components/app-state-provider";
 import { fixedFloat } from "@/lib/ff";
 import { Suspense } from "react";
 import Container from "./components/container";
@@ -28,31 +31,22 @@ export default function RootLayout({
     <html lang="en">
       <body className={albertSans.className}>
         <ToastProvider>
-          <FediInjectionProvider
-            fediModName="Swap"
-            minSupportedAPIVersion="legacy"
-            supportedBitcoinNetworks={{
-              signet: false,
-              bitcoin: true,
-            }}
-          >
-            <Fallback>
-              <Suspense
-                fallback={
-                  <Container>
-                    <Icon
-                      icon="IconLoader2"
-                      size="lg"
-                      className="animate-spin text-lightGrey"
-                    />
-                    <Text>Fetching Rates...</Text>
-                  </Container>
-                }
-              >
-                <LoadedCurrencies>{children}</LoadedCurrencies>
-              </Suspense>
-            </Fallback>
-          </FediInjectionProvider>
+          <Container>
+            <Suspense
+              fallback={
+                <>
+                  <Icon
+                    icon="IconLoader2"
+                    size="lg"
+                    className="animate-spin text-lightGrey"
+                  />
+                  <Text>Fetching Rates...</Text>
+                </>
+              }
+            >
+              <LoadedCurrencies>{children}</LoadedCurrencies>
+            </Suspense>
+          </Container>
         </ToastProvider>
       </body>
     </html>
@@ -67,7 +61,7 @@ async function LoadedCurrencies({ children }: { children: React.ReactNode }) {
   try {
     currencies = await new Promise(async (resolve, reject) => {
       setTimeout(() => reject(new Error("timeout")), 5000);
-      const currencies = await fixedFloat.currencies()
+      const currencies = await fixedFloat.currencies();
 
       if (Array.isArray(currencies.data)) {
         resolve(currencies.data);
@@ -80,20 +74,33 @@ async function LoadedCurrencies({ children }: { children: React.ReactNode }) {
   }
 
   try {
-    boltzToLnRate = (await fetch(`${boltzEndpoint}/v2/swap/submarine`).then((res) => res.json())).BTC.BTC
+    boltzToLnRate = (
+      await fetch(`${boltzEndpoint}/v2/swap/submarine`).then((res) =>
+        res.json()
+      )
+    ).BTC.BTC;
   } catch {
     /* no-op */
   }
 
   try {
-    boltzFromLnRate = (await fetch(`${boltzEndpoint}/v2/swap/reverse`).then((res) => res.json())).BTC.BTC
+    boltzFromLnRate = (
+      await fetch(`${boltzEndpoint}/v2/swap/reverse`).then((res) => res.json())
+    ).BTC.BTC;
   } catch {
     /* no-op */
   }
 
   return (
-    <AppStateProvider currencies={currencies || null} boltzToLnRate={boltzToLnRate} boltzFromLnRate={boltzFromLnRate}>
+    <AppStateProvider
+      currencies={currencies || null}
+      boltzToLnRate={boltzToLnRate}
+      boltzFromLnRate={boltzFromLnRate}
+    >
       {children}
     </AppStateProvider>
   );
 }
+
+// TODO: move to separate page to prevent caching, don't do state in layout
+export const dynamic = "force-dynamic";

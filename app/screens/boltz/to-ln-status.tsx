@@ -5,7 +5,6 @@ import {
   useAppState,
 } from "@/app/components/app-state-provider";
 import Container from "@/app/components/container";
-import SwapIndicator from "@/app/components/swap-indicator";
 import { useEffect, useRef, useState } from "react";
 import Flex from "@/app/components/ui/flex";
 import { ProgressStep } from "../status/pending/step";
@@ -24,6 +23,7 @@ import { randomBytes } from "crypto";
 import { ECPairFactory } from "ecpair";
 import { BoltzStatus, boltzEndpoint, boltzStatusSteps } from "@/lib/constants";
 import ecc from "@bitcoinerlab/secp256k1";
+import CoinHeader from "@/app/components/coin-header";
 
 export default function ToLnStatus() {
   const [status, setStatus] = useState<BoltzStatus>("new");
@@ -52,6 +52,10 @@ export default function ToLnStatus() {
 
       const keys = ECPairFactory(ecc).makeRandom();
 
+      console.log(keys, "KEYS");
+      console.log(keys.publicKey.toString("hex"), "PUBKEY");
+      console.log(exchangeOrder, "EXCHANGE ORDER");
+
       // Create a Submarine Swap
       const createdResponse = (
         await axios.post(`${boltzEndpoint}/v2/swap/submarine`, {
@@ -72,7 +76,7 @@ export default function ToLnStatus() {
 
       if (!wsRef.current) {
         wsRef.current = new WebSocket(
-          `${boltzEndpoint.replace("https://", "wss://")}/v2/ws`,
+          `${boltzEndpoint.replace("https://", "wss://")}/v2/ws`
         );
       }
 
@@ -84,21 +88,12 @@ export default function ToLnStatus() {
             op: "subscribe",
             channel: "swap.update",
             args: [createdResponse.id],
-          }),
+          })
         );
       };
 
       webSocket.onerror = (error) => {
         console.error("WebSocket error:", error);
-
-        if (status === "new") {
-          setError("Failed to create swap");
-        } else if (status === "created") {
-          setError("Payment expired");
-        } else {
-          setError("An unknown error occurred");
-        }
-        webSocket.close();
       };
 
       webSocket.onmessage = async (message) => {
@@ -107,8 +102,8 @@ export default function ToLnStatus() {
           return;
         }
 
-        console.log(message);
-        console.log(msg);
+        console.log(message, "MESSAGE");
+        console.log(msg, "MSG");
 
         switch (msg.args[0].status) {
           case "transaction.mempool":
@@ -119,7 +114,7 @@ export default function ToLnStatus() {
             // Get the information request to create a partial signature
             const claimTxDetails = (
               await axios.get(
-                `${boltzEndpoint}/v2/swap/submarine/${createdResponse.id}/claim`,
+                `${boltzEndpoint}/v2/swap/submarine/${createdResponse.id}/claim`
               )
             ).data;
 
@@ -130,7 +125,7 @@ export default function ToLnStatus() {
                 .decode(exchangeOrder.invoice)
                 .tags.find((tag) => tag.tagName === "payment_hash")!
                 .data as string,
-              "hex",
+              "hex"
             );
             if (
               !crypto
@@ -142,7 +137,7 @@ export default function ToLnStatus() {
 
             const boltzPublicKey = Buffer.from(
               createdResponse.claimPublicKey,
-              "hex",
+              "hex"
             );
 
             // Create a musig signing instance
@@ -154,7 +149,7 @@ export default function ToLnStatus() {
             TaprootUtils.tweakMusig(
               musig,
               SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree)
-                .tree,
+                .tree
             );
 
             // Aggregate the nonces
@@ -163,7 +158,7 @@ export default function ToLnStatus() {
             ]);
             // Initialize the session to sign the transaction hash from the response
             musig.initializeSession(
-              Buffer.from(claimTxDetails.transactionHash, "hex"),
+              Buffer.from(claimTxDetails.transactionHash, "hex")
             );
 
             // Give our public nonce and the partial signature to Boltz
@@ -172,9 +167,9 @@ export default function ToLnStatus() {
               {
                 pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
                 partialSignature: Buffer.from(musig.signPartial()).toString(
-                  "hex",
+                  "hex"
                 ),
-              },
+              }
             );
 
             console.log("Claimed");
@@ -203,7 +198,7 @@ export default function ToLnStatus() {
     </Container>
   ) : (
     <Container className="p-4">
-      <SwapIndicator />
+      <CoinHeader />
       {status === "done" ? (
         <Flex grow col width="full">
           <Flex grow col gap={4}>

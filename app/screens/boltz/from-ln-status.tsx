@@ -5,12 +5,11 @@ import {
   useAppState,
 } from "@/app/components/app-state-provider";
 import Container from "@/app/components/container";
-import SwapIndicator from "@/app/components/swap-indicator";
 import { useEffect, useRef, useState } from "react";
 import Flex from "@/app/components/ui/flex";
 import { ProgressStep } from "../status/pending/step";
 import { StatusBanner } from "@/app/components/ui/status-banner";
-import { Button, Icon, Text, useFediInjection } from "@fedibtc/ui";
+import { Button, Icon, Text } from "@fedibtc/ui";
 import { BorderContainer, PayNotice } from "./pay-notice";
 import { PaidNotice } from "../status/pending/paid-notice";
 import { ReverseSwapResponse } from "@/lib/types";
@@ -37,14 +36,14 @@ import { randomBytes } from "crypto";
 import { ECPairFactory } from "ecpair";
 import ecc from "@bitcoinerlab/secp256k1";
 import { BoltzStatus, boltzEndpoint, boltzStatusSteps } from "@/lib/constants";
+import CoinHeader from "@/app/components/coin-header";
 
 export default function FromLnStatus() {
   const [status, setStatus] = useState<BoltzStatus>("new");
   const [order, setOrder] = useState<ReverseSwapResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const { exchangeOrder } = useAppState<AppStateBoltzFromLn>();
-  const { webln } = useFediInjection();
+  const { exchangeOrder, webln } = useAppState<AppStateBoltzFromLn>();
 
   const determineStepStatus = (step: BoltzStatus) => {
     if (status === step) {
@@ -89,7 +88,7 @@ export default function FromLnStatus() {
 
       if (!wsRef.current) {
         wsRef.current = new WebSocket(
-          `${boltzEndpoint.replace("https://", "wss://")}/v2/ws`,
+          `${boltzEndpoint.replace("https://", "wss://")}/v2/ws`
         );
       }
 
@@ -101,22 +100,12 @@ export default function FromLnStatus() {
             op: "subscribe",
             channel: "swap.update",
             args: [createdResponse.id],
-          }),
+          })
         );
       };
 
       webSocket.onerror = (error) => {
         console.error("WebSocket error:", error);
-
-        if (status === "new") {
-          setError("Failed to create swap");
-        } else if (status === "created") {
-          setError("Payment expired");
-        } else {
-          setError("An unknown error occurred");
-        }
-
-        webSocket.close();
       };
 
       webSocket.onmessage = async (message) => {
@@ -131,7 +120,7 @@ export default function FromLnStatus() {
 
             const boltzPublicKey = Buffer.from(
               createdResponse.refundPublicKey,
-              "hex",
+              "hex"
             );
 
             // Create a musig signing session and tweak it with the Taptree of the swap scripts
@@ -142,7 +131,7 @@ export default function FromLnStatus() {
             const tweakedKey = TaprootUtils.tweakMusig(
               musig,
               SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree)
-                .tree,
+                .tree
             );
 
             // Parse the lockup transaction and find the output relevant for the swap
@@ -166,8 +155,8 @@ export default function FromLnStatus() {
                   },
                 ],
                 address.toOutputScript(exchangeOrder.address, networks.bitcoin),
-                fee,
-              ),
+                fee
+              )
             );
 
             // Get the partial signature from Boltz
@@ -179,7 +168,7 @@ export default function FromLnStatus() {
                   transaction: claimTx.toHex(),
                   preimage: preimage.toString("hex"),
                   pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
-                },
+                }
               )
             ).data;
 
@@ -194,14 +183,14 @@ export default function FromLnStatus() {
                 0,
                 [swapOutput.script],
                 [swapOutput.value],
-                Transaction.SIGHASH_DEFAULT,
-              ),
+                Transaction.SIGHASH_DEFAULT
+              )
             );
 
             // Add the partial signature from Boltz
             musig.addPartial(
               boltzPublicKey,
-              Buffer.from(boltzSig.partialSignature, "hex"),
+              Buffer.from(boltzSig.partialSignature, "hex")
             );
 
             // Create our partial signature
@@ -234,7 +223,9 @@ export default function FromLnStatus() {
   useEffect(() => {
     if (!order) return;
 
-    webln.sendPayment(order.invoice).catch(() => {});
+    if (webln) {
+      webln.sendPayment(order.invoice).catch(() => {});
+    }
   }, [order, webln]);
 
   return error ? (
@@ -246,7 +237,7 @@ export default function FromLnStatus() {
     </Container>
   ) : (
     <Container className="p-4">
-      <SwapIndicator />
+      <CoinHeader />
       {status === "done" ? (
         <Flex grow col width="full">
           <Flex grow col gap={4}>

@@ -26,7 +26,7 @@ const SelectTrigger = React.forwardRef<
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName;
 
 const SelectTriggerBase = styled(SelectPrimitive.Trigger, {
-  base: "flex h-[40px] w-full items-center justify-between rounded-md border border-solid border-lightGrey bg-white px-md py-sm text-sm placeholder:text-grey focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+  base: "flex grow basis-0 gap-1 h-[40px] items-center justify-center rounded-full bg-white px-6 py-2 text-sm focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
 });
 
 const SelectContent = React.forwardRef<
@@ -42,7 +42,7 @@ const SelectContent = React.forwardRef<
 SelectContent.displayName = SelectPrimitive.Content.displayName;
 
 const SelectContentBase = styled(SelectPrimitive.Content, {
-  base: "relative z-50 min-w-[8rem] overflow-hidden rounded-md border bg-white text-grey shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+  base: "relative z-50 overflow-hidden rounded-[16px] border bg-white text-grey",
   variants: {
     position: {
       popper:
@@ -56,7 +56,7 @@ const SelectContentBase = styled(SelectPrimitive.Content, {
 });
 
 const SelectViewport = styled(SelectPrimitive.Viewport, {
-  base: "p-1",
+  base: "",
   variants: {
     position: {
       popper:
@@ -87,7 +87,7 @@ const SelectItem = React.forwardRef<
 SelectItem.displayName = SelectPrimitive.Item.displayName;
 
 const SelectItemBase = styled(SelectPrimitive.Item, {
-  base: "relative flex w-full cursor-default select-none items-center rounded-sm py-sm pl-[40px] pr-md text-sm outline-none focus:bg-extraLightGrey focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+  base: "relative flex w-full cursor-default select-none items-center py-sm pl-[40px] pr-md text-sm outline-none focus:bg-extraLightGrey focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
 });
 
 const SelectSeparator = styled(SelectPrimitive.Separator, {

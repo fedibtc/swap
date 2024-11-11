@@ -1,13 +1,18 @@
 "use client";
 
 import { Currency } from "@/lib/ff/types";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { WebLNProvider } from "webln";
 
 interface AppStateBase {
   screen: AppScreen;
   isFFBroken: boolean;
+  draftAmount: number | null;
+  draftAddress: string | null;
+  draftEmail: string | null;
   boltzToLnRate: BoltzToLnRate | null;
   boltzFromLnRate: BoltzFromLnRate | null;
+  webln: WebLNProvider | null;
 }
 
 export interface BoltzToLnRate {
@@ -78,6 +83,8 @@ export enum Direction {
 
 export enum AppScreen {
   Home,
+  Address,
+  Confirmation,
   Status,
   ToLnStatus,
   FromLnStatus,
@@ -98,15 +105,22 @@ export function AppStateProvider({
 }: {
   children: React.ReactNode;
   currencies: Array<Currency> | null;
-    boltzToLnRate: BoltzToLnRate | null;
-    boltzFromLnRate: BoltzFromLnRate | null;
+  boltzToLnRate: BoltzToLnRate | null;
+  boltzFromLnRate: BoltzFromLnRate | null;
 }) {
-  const [value, setValue] = useState<AppState>({
+  const weblnRef = useRef<WebLNProvider | null>(null);
+  const [value, setValue] = useState<Omit<AppState, "webln">>({
     direction: Direction.FromLightning,
     coin: "BTC",
+    isFFBroken: currencies === null,
+    boltzToLnRate,
+    boltzFromLnRate,
     exchangeOrder: null,
+    draftAmount: null,
+    draftAddress: null,
+    draftEmail: null,
     screen: AppScreen.Home,
-  } as AppState);
+  });
 
   const update = (state: Partial<AppState>) => {
     setValue(
@@ -118,9 +132,41 @@ export function AppStateProvider({
     );
   };
 
+  useEffect(() => {
+    async function initialize() {
+      if (window.webln) {
+        await window.webln.enable();
+
+        if (
+          typeof window.webln.isEnabled === "function" &&
+          (await (window.webln as any).isEnabled())
+        ) {
+          weblnRef.current = window.webln;
+        } else if (
+          typeof window.webln.isEnabled === "boolean" &&
+          window.webln.isEnabled
+        ) {
+          weblnRef.current = window.webln;
+        }
+      }
+    }
+
+    initialize();
+  }, []);
+
   return (
     <AppStateContext.Provider
-      value={{ ...value, update, isFFBroken: currencies === null, boltzToLnRate, boltzFromLnRate }}
+      value={
+        {
+          ...value,
+          update,
+          boltzToLnRate,
+          boltzFromLnRate,
+          webln: weblnRef.current,
+        } as AppState & {
+          update: (state: Partial<AppState>) => void;
+        }
+      }
     >
       {children}
     </AppStateContext.Provider>

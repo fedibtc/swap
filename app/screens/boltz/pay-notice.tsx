@@ -4,7 +4,7 @@ import {
   Direction,
   useAppState,
 } from "@/app/components/app-state-provider";
-import { Text, Button, Icon, useFediInjection, useToast } from "@fedibtc/ui";
+import { Text, Button, Icon, useToast } from "@fedibtc/ui";
 import QRCode from "react-qr-code";
 import { styled } from "react-tailwind-variants";
 import {
@@ -21,10 +21,9 @@ export function PayNotice({
 }: {
   order: ReverseSwapResponse | SubmarineSwapResponse;
 }) {
-  const { coin, direction } = useAppState<
+  const { coin, direction, webln } = useAppState<
     AppStateBoltzFromLn | AppStateBoltzToLn
   >();
-  const { webln } = useFediInjection();
   const toast = useToast();
 
   let invoice: null | string = "bip21" in order ? order.bip21 : order.invoice;
@@ -102,9 +101,13 @@ export function PayNotice({
               </Text>
               <Icon icon="IconCopy" className="w-4 h-4 shrink-0" />
             </CopyButton>
-            {direction === Direction.FromLightning && (
+            {direction === Direction.FromLightning && webln && (
               <Button
-                onClick={() => webln.sendPayment(address).catch(() => {})}
+                onClick={() => {
+                  if (webln) {
+                    webln.sendPayment(address).catch(() => {});
+                  }
+                }}
                 width="full"
               >
                 Pay with Lightning

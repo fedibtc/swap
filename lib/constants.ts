@@ -1,6 +1,20 @@
 import { Currency } from "./ff/types";
 
-export const currencyStats: Array<Currency & { contractAddress: string }> = [
+export const currencyStats: Array<Currency & { contractAddress: string, background: string }> = [
+  {
+    code: "LN",
+    coin: "LN",
+    network: "LN",
+    priority: 6,
+    name: "Lightning",
+    recv: true,
+    send: true,
+    tag: "",
+    logo: "/lightning.svg",
+    color: "#9157ff",
+    background: "#ecf7f7",
+    contractAddress: "",
+  },
   {
     code: "BTC",
     coin: "BTC",
@@ -12,6 +26,7 @@ export const currencyStats: Array<Currency & { contractAddress: string }> = [
     tag: "",
     logo: "https://ff.io/assets/images/coins/svg/btc.svg",
     color: "#f7931a",
+    background: "#f7931a33",
     contractAddress: "",
   },
   {
@@ -25,6 +40,7 @@ export const currencyStats: Array<Currency & { contractAddress: string }> = [
     tag: "",
     logo: "https://ff.io/assets/images/coins/svg/eth.svg",
     color: "#000",
+    background: "#ecf7f7",
     contractAddress: "",
   },
   {
@@ -32,12 +48,13 @@ export const currencyStats: Array<Currency & { contractAddress: string }> = [
     coin: "USDC",
     network: "ETH",
     priority: 0,
-    name: "USD Coin (ERC20)",
+    name: "USDC",
     recv: true,
     send: true,
     tag: "",
     logo: "https://ff.io/assets/images/coins/svg/usdceth.svg",
     color: "#2775ca",
+    background: "#2775ca33",
     contractAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
   },
   {
@@ -45,12 +62,13 @@ export const currencyStats: Array<Currency & { contractAddress: string }> = [
     coin: "USDT",
     network: "ETH",
     priority: 4,
-    name: "Tether (ERC20)",
+    name: "USDT",
     recv: true,
     send: false,
     tag: "",
     logo: "https://ff.io/assets/images/coins/svg/usdt.svg",
     color: "#53ae94",
+    background: "#53ae9433",
     contractAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
   },
   {
@@ -58,12 +76,13 @@ export const currencyStats: Array<Currency & { contractAddress: string }> = [
     coin: "USDT",
     network: "TRX",
     priority: 4,
-    name: "Tether (TRC20)",
+    name: "USDTTRC",
     recv: true,
     send: true,
     tag: "",
     logo: "https://ff.io/assets/images/coins/svg/usdttrc.svg",
     color: "#53ae94",
+    background: "#53ae9433",
     contractAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
   },
 ];
