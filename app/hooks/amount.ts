@@ -1,14 +1,13 @@
 import { useCallback, useMemo } from "react";
-import { Direction, useAppState } from "../components/app-state-provider";
+import {
+  Direction,
+  useAppState,
+} from "../components/providers/app-state-provider";
+import { useBoltz } from "../components/providers/boltz-provider";
 
 export function useAmount() {
-  const { boltzToLnRate, boltzFromLnRate, direction, coin, draftAmount } =
-    useAppState();
-
-  if (!boltzToLnRate || !boltzFromLnRate)
-    throw new Error(
-      "useBoltz can only be used if boltzToLnRate and boltzFromLnRate are defined"
-    );
+  const { direction, coin, draftAmount } = useAppState();
+  const boltz = useBoltz();
 
   const calculateBoltzInput = useCallback(
     (desiredOutput: number, networkFee: number, providerFeeRate: number) => {
@@ -20,23 +19,23 @@ export function useAmount() {
   );
 
   const networkFees = useMemo(() => {
-    if (coin !== "BTC") return 0;
+    if (coin !== "BTC" || !boltz) return 0;
 
     if (direction === Direction.FromLightning) {
       return (
-        boltzFromLnRate.fees.minerFees.lockup +
-        boltzFromLnRate.fees.minerFees.claim
+        boltz.boltzFromLnRate.fees.minerFees.lockup +
+        boltz.boltzFromLnRate.fees.minerFees.claim
       );
     } else {
-      return boltzToLnRate.fees.minerFees;
+      return boltz.boltzToLnRate.fees.minerFees;
     }
-  }, [direction, boltzToLnRate, boltzFromLnRate, coin]);
+  }, [direction, boltz, coin]);
 
   const inputAmount = useMemo(() => {
     if (!draftAmount) return 0;
 
     // 1% fixed fee
-    if (coin !== "BTC") {
+    if (coin !== "BTC" || !boltz) {
       return draftAmount / 0.99;
     }
 
@@ -44,24 +43,17 @@ export function useAmount() {
       return calculateBoltzInput(
         draftAmount,
         networkFees,
-        boltzFromLnRate.fees.percentage
+        boltz.boltzFromLnRate
+          .fees.percentage
       );
     } else {
       return calculateBoltzInput(
         draftAmount,
         networkFees,
-        boltzToLnRate.fees.percentage
+        boltz.boltzToLnRate.fees.percentage
       );
     }
-  }, [
-    boltzToLnRate,
-    boltzFromLnRate,
-    direction,
-    draftAmount,
-    networkFees,
-    coin,
-    calculateBoltzInput,
-  ]);
+  }, [boltz, direction, draftAmount, networkFees, coin, calculateBoltzInput]);
 
   const swapFees = useMemo(() => {
     if (!draftAmount) return 0;

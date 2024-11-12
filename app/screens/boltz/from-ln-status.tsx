@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  AppStateBoltzFromLn,
+  Direction,
   useAppState,
-} from "@/app/components/app-state-provider";
+} from "@/app/components/providers/app-state-provider";
 import Container from "@/app/components/container";
 import { useEffect, useRef, useState } from "react";
 import Flex from "@/app/components/ui/flex";
@@ -30,20 +30,28 @@ import {
   TaprootUtils,
   constructClaimTransaction,
   detectSwap,
-  targetFee,
 } from "boltz-core";
 import { randomBytes } from "crypto";
 import { ECPairFactory } from "ecpair";
 import ecc from "@bitcoinerlab/secp256k1";
 import { BoltzStatus, boltzEndpoint, boltzStatusSteps } from "@/lib/constants";
 import CoinHeader from "@/app/components/coin-header";
+import {
+  BoltzSwapFromLn,
+  useBoltz,
+} from "@/app/components/providers/boltz-provider";
 
 export default function FromLnStatus() {
   const [status, setStatus] = useState<BoltzStatus>("new");
   const [order, setOrder] = useState<ReverseSwapResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const { exchangeOrder, webln } = useAppState<AppStateBoltzFromLn>();
+  const { webln, draftAmount } = useAppState();
+  const boltz = useBoltz();
+
+  if (!boltz || boltz.swap?.direction !== Direction.FromLightning)
+    throw new Error("Invalid boltz swap state");
+
+  const swap = boltz.swap as BoltzSwapFromLn;
 
   const determineStepStatus = (step: BoltzStatus) => {
     if (status === step) {
@@ -59,7 +67,7 @@ export default function FromLnStatus() {
 
   useEffect(() => {
     async function startSwap() {
-      if (!exchangeOrder || status !== "new") return;
+      if (status !== "new" || !draftAmount) return;
 
       initEccLib(ecc);
 
@@ -70,7 +78,7 @@ export default function FromLnStatus() {
       // Create a Submarine Swap
       const createdResponse = (
         await axios.post(`${boltzEndpoint}/v2/swap/reverse`, {
-          invoiceAmount: exchangeOrder.amount,
+          invoiceAmount: swap.amount,
           to: "BTC",
           from: "BTC",
           claimPublicKey: keys.publicKey.toString("hex"),
@@ -123,8 +131,10 @@ export default function FromLnStatus() {
               "hex"
             );
 
+            const secp = await zkpInit();
+
             // Create a musig signing session and tweak it with the Taptree of the swap scripts
-            const musig = new Musig(await zkpInit(), keys, randomBytes(32), [
+            const musig = new Musig(secp, keys, randomBytes(32), [
               boltzPublicKey,
               keys.publicKey,
             ]);
@@ -142,21 +152,24 @@ export default function FromLnStatus() {
             }
 
             // Create a claim transaction to be signed cooperatively via a key path spend
-            const claimTx = targetFee(2, (fee) =>
-              constructClaimTransaction(
-                [
-                  {
-                    ...swapOutput,
-                    keys,
-                    preimage,
-                    cooperative: true,
-                    type: OutputType.Taproot,
-                    txHash: lockupTx.getHash(),
-                  },
-                ],
-                address.toOutputScript(exchangeOrder.address, networks.bitcoin),
-                fee
-              )
+            const input = {
+              ...swapOutput,
+              keys,
+              preimage,
+              cooperative: true,
+              type: OutputType.Taproot,
+              txHash: lockupTx.getHash(),
+            };
+
+            const feeBudget = Number(input.value) - draftAmount;
+
+            const claimTx = constructClaimTransaction(
+              [input],
+              address.toOutputScript(
+                (swap as BoltzSwapFromLn).address,
+                networks.bitcoin
+              ),
+              feeBudget
             );
 
             // Get the partial signature from Boltz
@@ -215,10 +228,10 @@ export default function FromLnStatus() {
       };
     }
 
-    if (exchangeOrder && status === "new") {
+    if (swap && status === "new") {
       startSwap();
     }
-  }, [exchangeOrder, status]);
+  }, [swap, status, draftAmount]);
 
   useEffect(() => {
     if (!order) return;
@@ -228,14 +241,7 @@ export default function FromLnStatus() {
     }
   }, [order, webln]);
 
-  return error ? (
-    <Container>
-      <Text variant="h2" weight="medium">
-        An Error Occurred
-      </Text>
-      <Text className="text-center">{error}</Text>
-    </Container>
-  ) : (
+  return (
     <Container className="p-4">
       <CoinHeader />
       {status === "done" ? (
@@ -247,9 +253,8 @@ export default function FromLnStatus() {
                 Exchange Complete
               </Text>
               <Text className="text-center">
-                Successfully swapped{" "}
-                <strong>{exchangeOrder?.amount} sats</strong> from Lightning to
-                Onchain Bitcoin
+                Successfully swapped <strong>{swap.amount} sats</strong> from
+                Lightning to Onchain Bitcoin
               </Text>
             </BorderContainer>
           </Flex>

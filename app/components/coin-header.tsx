@@ -2,7 +2,7 @@ import { Icon, Text } from "@fedibtc/ui";
 import Flex from "./ui/flex";
 import { currencyStats } from "@/lib/constants";
 import { styled } from "react-tailwind-variants";
-import { Direction, useAppState } from "./app-state-provider";
+import { Direction, useAppState } from "./providers/app-state-provider";
 
 export default function CoinHeader({ onBack }: { onBack?: () => void }) {
   const { coin, direction } = useAppState();
@@ -71,5 +71,5 @@ export default function CoinHeader({ onBack }: { onBack?: () => void }) {
 }
 
 const CoinItem = styled("div", {
-  base: "flex grow basis-0 gap-1 h-[48px] items-center justify-center rounded-full bg-white px-6 text-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:outline data-[state=open]:outline-offset-0",
+  base: "flex grow basis-0 gap-1 h-[48px] items-center justify-center rounded-full bg-white px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:outline data-[state=open]:outline-offset-0",
 });

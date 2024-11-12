@@ -1,79 +1,17 @@
 "use client";
 
-import { Currency } from "@/lib/ff/types";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { WebLNProvider } from "webln";
+import { useBoltz } from "./boltz-provider";
 
-interface AppStateBase {
+interface AppState {
   screen: AppScreen;
-  isFFBroken: boolean;
   draftAmount: number | null;
   draftAddress: string | null;
   draftEmail: string | null;
-  boltzToLnRate: BoltzToLnRate | null;
-  boltzFromLnRate: BoltzFromLnRate | null;
   webln: WebLNProvider | null;
-}
-
-export interface BoltzToLnRate {
-  hash: string;
-  rate: number;
-  limits: {
-    maximal: number;
-    minimal: number;
-    maximalZeroConf: number;
-  };
-  fees: {
-    percentage: number;
-    minerFees: number;
-  };
-}
-
-export interface BoltzFromLnRate {
-  hash: string;
-  rate: number;
-  limits: {
-    maximal: number;
-    minimal: number;
-  };
-  fees: {
-    percentage: number;
-    minerFees: {
-      claim: number;
-      lockup: number;
-    };
-  };
-}
-
-export interface AppStateBoltzToLn extends AppStateBase {
-  direction: Direction.ToLightning;
-  coin: "BTC";
-  exchangeOrder: {
-    invoice: string;
-    amount: number;
-  } | null;
-}
-
-export interface AppStateBoltzFromLn extends AppStateBase {
-  direction: Direction.FromLightning;
-  coin: "BTC";
-  exchangeOrder: {
-    address: string;
-    amount: number;
-  } | null;
-}
-
-export interface AppStateFF extends AppStateBase {
   direction: Direction;
   coin: string;
-  exchangeOrder: ExchangeData | null;
-}
-
-type AppState = AppStateFF | AppStateBoltzToLn | AppStateBoltzFromLn;
-
-interface ExchangeData {
-  id: string;
-  token: string;
 }
 
 export enum Direction {
@@ -99,23 +37,14 @@ export const AppStateContext = createContext<
 
 export function AppStateProvider({
   children,
-  currencies,
-  boltzToLnRate,
-  boltzFromLnRate,
 }: {
   children: React.ReactNode;
-  currencies: Array<Currency> | null;
-  boltzToLnRate: BoltzToLnRate | null;
-  boltzFromLnRate: BoltzFromLnRate | null;
 }) {
+  const boltz = useBoltz();
   const weblnRef = useRef<WebLNProvider | null>(null);
   const [value, setValue] = useState<Omit<AppState, "webln">>({
     direction: Direction.FromLightning,
-    coin: "BTC",
-    isFFBroken: currencies === null,
-    boltzToLnRate,
-    boltzFromLnRate,
-    exchangeOrder: null,
+    coin: boltz ? "BTC" : "ETH",
     draftAmount: null,
     draftAddress: null,
     draftEmail: null,
@@ -160,8 +89,6 @@ export function AppStateProvider({
         {
           ...value,
           update,
-          boltzToLnRate,
-          boltzFromLnRate,
           webln: weblnRef.current,
         } as AppState & {
           update: (state: Partial<AppState>) => void;

@@ -1,8 +1,7 @@
 import {
-  AppStateFF,
   Direction,
   useAppState,
-} from "@/app/components/app-state-provider";
+} from "@/app/components/providers/app-state-provider";
 import { Text, Button, Icon, useToast } from "@fedibtc/ui";
 import QRCode from "react-qr-code";
 import { styled } from "react-tailwind-variants";
@@ -17,7 +16,7 @@ import {
 import Flex from "@/app/components/ui/flex";
 
 export function PayNotice() {
-  const { coin, direction, webln } = useAppState<AppStateFF>();
+  const { coin, direction, webln } = useAppState();
   const { order } = useOrderStatus();
   const toast = useToast();
 

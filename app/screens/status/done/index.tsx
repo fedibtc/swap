@@ -3,16 +3,15 @@
 import { Button, Text } from "@fedibtc/ui";
 import Image from "next/image";
 import {
-  AppStateFF,
   Direction,
   useAppState,
-} from "@/app/components/app-state-provider";
+} from "@/app/components/providers/app-state-provider";
 import Flex from "@/app/components/ui/flex";
 import { BorderContainer } from "../pending/pay-notice";
 import { useOrderStatus } from "../status-provider";
 
 export default function DoneStatus() {
-  const { direction, coin } = useAppState<AppStateFF>();
+  const { direction, coin } = useAppState();
   const { order } = useOrderStatus();
 
   const from =

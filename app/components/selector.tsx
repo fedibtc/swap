@@ -4,13 +4,13 @@ import { useCallback, useState } from "react";
 import { currencyStats } from "@/lib/constants";
 import * as Popover from "@radix-ui/react-popover";
 import { styled } from "react-tailwind-variants";
-import { Direction, useAppState } from "./app-state-provider";
+import { Direction, useAppState } from "./providers/app-state-provider";
 
 export default function Selector() {
-  const { update } = useAppState();
+  const { update, coin } = useAppState();
 
   const [fromOption, setFromOption] = useState("LN");
-  const [toOption, setToOption] = useState("BTC");
+  const [toOption, setToOption] = useState(coin);
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
 
@@ -163,7 +163,7 @@ export default function Selector() {
 }
 
 const SelectionTrigger = styled(Popover.Trigger, {
-  base: "flex grow basis-0 gap-1 h-[48px] items-center justify-center rounded-full bg-white px-6 text-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:outline data-[state=open]:outline-offset-0",
+  base: "flex grow basis-0 gap-1 h-[48px] items-center justify-center rounded-full bg-white px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:outline data-[state=open]:outline-offset-0",
 });
 
 const SelectionItem = styled("button", {

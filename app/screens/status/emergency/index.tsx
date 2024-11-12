@@ -2,15 +2,17 @@ import Flex from "@/app/components/ui/flex";
 import { StatusBanner } from "@/app/components/ui/status-banner";
 import { Button, Icon, Text, useToast, Input } from "@fedibtc/ui";
 import { useOrderStatus } from "../status-provider";
-import { AppStateFF, useAppState } from "@/app/components/app-state-provider";
+import { useAppState } from "@/app/components/providers/app-state-provider";
 import { useState } from "react";
 import { EmergencyStatus } from "@/lib/ff/types";
 import { handleEmergency } from "@/app/actions/handle-emergency";
+import { useFixedFloat } from "@/app/components/providers/ff-provider";
 
 export default function EmergencyStatusComponent() {
-  const { coin, exchangeOrder } = useAppState<AppStateFF>();
+  const { coin } = useAppState();
+  const ff = useFixedFloat();
   const {
-    order: { emergency},
+    order: { emergency },
   } = useOrderStatus();
   const toast = useToast();
 
@@ -18,13 +20,18 @@ export default function EmergencyStatusComponent() {
   const [isRefunding, setIsRefunding] = useState(false);
   const [hasRefunded, setHasRefunded] = useState(false);
 
+  if (!ff || !ff.swap) throw new Error("Invalid FixedFloat state");
+
+  const swap = ff.swap;
+
   const handleRefund = async () => {
-    if (!exchangeOrder) return;
+    if (!swap) return;
+
     setIsRefunding(true);
     try {
       const res = await handleEmergency({
-        id: exchangeOrder.id,
-        token: exchangeOrder.token,
+        id: swap.id,
+        token: swap.token,
         choice: "REFUND",
         address: emergencyAddress,
       });

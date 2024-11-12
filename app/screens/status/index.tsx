@@ -1,10 +1,9 @@
 "use client";
 
 import {
-  AppStateFF,
   Direction,
   useAppState,
-} from "@/app/components/app-state-provider";
+} from "@/app/components/providers/app-state-provider";
 import { useCallback, useEffect, useState } from "react";
 import { Order, StatusStateProvider } from "./status-provider";
 import { getOrder } from "@/app/actions/order-status";
@@ -17,17 +16,23 @@ import EmergencyStatusComponent from "./emergency";
 import PendingStatus from "./pending";
 import DoneStatus from "./done";
 import CoinHeader from "@/app/components/coin-header";
+import { useFixedFloat } from "@/app/components/providers/ff-provider";
 
 export default function Status() {
-  const { exchangeOrder, direction, webln } = useAppState<AppStateFF>();
+  const { direction, webln } = useAppState();
+  const ff = useFixedFloat();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string>();
 
+  if (!ff || !ff.swap) throw new Error("Invalid FixedFloat state");
+
+  const swap = ff.swap;
+
   const pollOrder = useCallback(async () => {
-    if (!exchangeOrder || !order) return;
- 
-    const res = await getOrder(exchangeOrder.id, exchangeOrder.token);
+    if (!swap || !order) return;
+
+    const res = await getOrder(swap.id, swap.token);
 
     if (res.success) {
       setOrder({
@@ -38,14 +43,14 @@ export default function Status() {
         emergency: res.data.emergency,
       });
     }
-  }, [exchangeOrder, order]);
+  }, [swap, order]);
 
   useEffect(() => {
     async function retrieveOrder() {
-      if (!exchangeOrder) return;
+      if (!swap) return;
 
       try {
-        const res = await getOrder(exchangeOrder.id, exchangeOrder.token);
+        const res = await getOrder(swap.id, swap.token);
 
         if (!res.success) {
           throw new Error(res.message);
@@ -64,7 +69,7 @@ export default function Status() {
     }
 
     retrieveOrder();
-  }, [exchangeOrder, setOrder]);
+  }, [swap, setOrder]);
 
   useEffect(() => {
     const interval = setInterval(pollOrder, 5000);

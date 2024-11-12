@@ -3,7 +3,7 @@ import {
   AppScreen,
   Direction,
   useAppState,
-} from "../components/app-state-provider";
+} from "../components/providers/app-state-provider";
 import CoinHeader from "../components/coin-header";
 import Flex from "../components/ui/flex";
 import { Button, Text, Icon, useToast } from "@fedibtc/ui";
@@ -19,6 +19,8 @@ import { createOrder } from "../actions/create-order";
 import { setOrderEmail } from "../actions/set-email";
 import { getRate } from "../actions/get-rate";
 import { useAmount } from "../hooks/amount";
+import { useBoltz } from "../components/providers/boltz-provider";
+import { useFixedFloat } from "../components/providers/ff-provider";
 
 export default function ConfirmScreen() {
   const {
@@ -28,9 +30,9 @@ export default function ConfirmScreen() {
     draftEmail,
     direction,
     coin,
-    boltzToLnRate,
-    boltzFromLnRate,
   } = useAppState();
+  const boltz = useBoltz();
+  const ff = useFixedFloat();
   const { inputAmount, swapFees } = useAmount();
   const [hideDetails, setHideDetails] = useState(false);
 
@@ -43,26 +45,30 @@ export default function ConfirmScreen() {
 
     try {
       if (coin === "BTC") {
-        if (!boltzFromLnRate || !boltzToLnRate) return;
+        if (!boltz) return;
 
         if (direction === Direction.FromLightning) {
+          boltz.setSwap({
+            direction,
+            amount: inputAmount,
+            address: draftAddress,
+          });
           update({
-            exchangeOrder: {
-              amount: inputAmount,
-              address: draftAddress,
-            },
             screen: AppScreen.FromLnStatus,
           });
         } else {
+          boltz.setSwap({
+            direction,
+            amount: inputAmount,
+            invoice: draftAddress,
+          });
           update({
-            exchangeOrder: {
-              amount: inputAmount,
-              invoice: draftAddress,
-            },
             screen: AppScreen.ToLnStatus,
           });
         }
       } else {
+        if (!ff) return;
+
         if (direction === Direction.FromLightning) {
           let correctedAmount = inputAmount / 100000000;
 
@@ -88,11 +94,12 @@ export default function ConfirmScreen() {
             });
           }
 
+          ff.setSwap({
+            id: res.data.id,
+            token: res.data.token,
+          });
+
           update({
-            exchangeOrder: {
-              id: res.data.id,
-              token: res.data.token,
-            },
             screen: AppScreen.Status,
           });
         } else {
@@ -124,10 +131,6 @@ export default function ConfirmScreen() {
           }
 
           update({
-            exchangeOrder: {
-              id: res.data.id,
-              token: res.data.token,
-            },
             screen: AppScreen.Status,
           });
         }

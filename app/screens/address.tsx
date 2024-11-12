@@ -4,7 +4,7 @@ import {
   AppScreen,
   useAppState,
   Direction,
-} from "../components/app-state-provider";
+} from "../components/providers/app-state-provider";
 import CoinHeader from "../components/coin-header";
 import { Input, Text, Icon, Button, Dialog, Scanner } from "@fedibtc/ui";
 import { currencyStats } from "@/lib/constants";

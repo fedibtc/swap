@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  AppStateBoltzToLn,
-  useAppState,
-} from "@/app/components/app-state-provider";
+import { Direction } from "@/app/components/providers/app-state-provider";
 import Container from "@/app/components/container";
 import { useEffect, useRef, useState } from "react";
 import Flex from "@/app/components/ui/flex";
@@ -24,13 +21,18 @@ import { ECPairFactory } from "ecpair";
 import { BoltzStatus, boltzEndpoint, boltzStatusSteps } from "@/lib/constants";
 import ecc from "@bitcoinerlab/secp256k1";
 import CoinHeader from "@/app/components/coin-header";
+import { BoltzSwapToLn, useBoltz } from "@/app/components/providers/boltz-provider";
 
 export default function ToLnStatus() {
   const [status, setStatus] = useState<BoltzStatus>("new");
   const [order, setOrder] = useState<SubmarineSwapResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const { exchangeOrder } = useAppState<AppStateBoltzToLn>();
+  const boltz = useBoltz();
+
+  if (!boltz || boltz.swap?.direction !== Direction.ToLightning)
+    throw new Error("Invalid boltz swap state");
+
+  const swap = boltz.swap as BoltzSwapToLn;
 
   const determineStepStatus = (step: BoltzStatus) => {
     if (status === step) {
@@ -46,7 +48,7 @@ export default function ToLnStatus() {
 
   useEffect(() => {
     async function startSwap() {
-      if (!exchangeOrder || status !== "new") return;
+      if (status !== "new") return;
 
       initEccLib(ecc);
 
@@ -54,12 +56,12 @@ export default function ToLnStatus() {
 
       console.log(keys, "KEYS");
       console.log(keys.publicKey.toString("hex"), "PUBKEY");
-      console.log(exchangeOrder, "EXCHANGE ORDER");
+      console.log(swap, "EXCHANGE ORDER");
 
       // Create a Submarine Swap
       const createdResponse = (
         await axios.post(`${boltzEndpoint}/v2/swap/submarine`, {
-          invoice: exchangeOrder.invoice,
+          invoice: swap.invoice,
           to: "BTC",
           from: "BTC",
           refundPublicKey: keys.publicKey.toString("hex"),
@@ -122,7 +124,7 @@ export default function ToLnStatus() {
             // of the invoice to the SHA256 hash of the preimage from the response
             const invoicePreimageHash = Buffer.from(
               bolt11
-                .decode(exchangeOrder.invoice)
+                .decode(swap.invoice)
                 .tags.find((tag) => tag.tagName === "payment_hash")!
                 .data as string,
               "hex"
@@ -184,19 +186,12 @@ export default function ToLnStatus() {
       };
     }
 
-    if (exchangeOrder && status === "new") {
+    if (swap && status === "new") {
       startSwap();
     }
-  }, [exchangeOrder, status]);
+  }, [swap, status]);
 
-  return error ? (
-    <Container>
-      <Text variant="h2" weight="medium">
-        An Error Occurred
-      </Text>
-      <Text className="text-center">{error}</Text>
-    </Container>
-  ) : (
+  return (
     <Container className="p-4">
       <CoinHeader />
       {status === "done" ? (
@@ -209,7 +204,7 @@ export default function ToLnStatus() {
               </Text>
               <Text className="text-center">
                 Successfully swapped{" "}
-                <strong>{exchangeOrder?.amount} sats</strong> from Onchain
+                <strong>{swap.amount} sats</strong> from Onchain
                 Bitcoin to Lightning
               </Text>
             </BorderContainer>

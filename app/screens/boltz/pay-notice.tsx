@@ -1,9 +1,7 @@
 import {
-  AppStateBoltzFromLn,
-  AppStateBoltzToLn,
   Direction,
   useAppState,
-} from "@/app/components/app-state-provider";
+} from "@/app/components/providers/app-state-provider";
 import { Text, Button, Icon, useToast } from "@fedibtc/ui";
 import QRCode from "react-qr-code";
 import { styled } from "react-tailwind-variants";
@@ -21,9 +19,7 @@ export function PayNotice({
 }: {
   order: ReverseSwapResponse | SubmarineSwapResponse;
 }) {
-  const { coin, direction, webln } = useAppState<
-    AppStateBoltzFromLn | AppStateBoltzToLn
-  >();
+  const { coin, direction, webln } = useAppState();
   const toast = useToast();
 
   let invoice: null | string = "bip21" in order ? order.bip21 : order.invoice;
