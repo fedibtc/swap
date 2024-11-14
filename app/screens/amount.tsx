@@ -7,28 +7,26 @@ import {
   Direction,
   useAppState,
 } from "../components/providers/app-state-provider";
-import { getRate } from "../actions/get-rate";
+import { getRateFromLightning, getRateToLightning } from "../actions/get-rate";
 import { decodeInvoice } from "@/lib/utils";
 import { styled } from "react-tailwind-variants";
 import { useBoltz } from "../components/providers/boltz-provider";
 import { useFixedFloat } from "../components/providers/ff-provider";
 
 export default function AmountScreen() {
-  const {
-    direction,
-    coin,
-    update,
-    webln,
-    draftAmount,
-  } = useAppState();
+  const { direction, coin, update, webln, draftAmount } = useAppState();
   const boltz = useBoltz();
   const ff = useFixedFloat();
   const [amount, setAmount] = useState(
     draftAmount ?? boltz?.boltzFromLnRate.limits.minimal ?? 50000
   );
   const [isRateLoading, setIsRateLoading] = useState(false);
-  const [min, setMin] = useState(boltz?.boltzFromLnRate.limits.minimal ?? 50000);
-  const [max, setMax] = useState(boltz?.boltzFromLnRate.limits.maximal ?? 25000000);
+  const [min, setMin] = useState(
+    boltz?.boltzFromLnRate.limits.minimal ?? 50000
+  );
+  const [max, setMax] = useState(
+    boltz?.boltzFromLnRate.limits.maximal ?? 25000000
+  );
 
   const isAmountValid = useMemo(
     () => amount >= min && amount <= max,
@@ -95,7 +93,9 @@ export default function AmountScreen() {
           setMin(boltz.boltzFromLnRate.limits.minimal);
           setMax(boltz.boltzFromLnRate.limits.maximal);
         } else {
-          const rate = await getRate("BTCLN", coin);
+          const rate = await getRateFromLightning(coin, amount / 100000000);
+
+          console.log(rate, "FROMLN RATE");
 
           setMin(Number(rate.from.min) * 100000000);
           setMax(Number(rate.from.max) * 100000000);
@@ -109,7 +109,9 @@ export default function AmountScreen() {
           setMin(boltz.boltzToLnRate.limits.minimal);
           setMax(boltz.boltzToLnRate.limits.maximal);
         } else {
-          const rate = await getRate(coin, "BTCLN");
+          const rate = await getRateToLightning(coin, amount / 100000000);
+
+          console.log(rate, "TOLN RATE");
 
           setMin(Number(rate.to.min) * 100000000);
           setMax(Number(rate.to.max) * 100000000);
@@ -122,24 +124,46 @@ export default function AmountScreen() {
     calculateRates();
   }, [direction, coin, amount, boltz]);
 
+  const canContinue = useMemo(() => {
+    if ((coin === "BTC" && !boltz) || (coin !== "BTC" && !ff) || (isRateLoading || !isAmountValid)) return false;
+
+    return true;
+  }, [isAmountValid, isRateLoading, boltz, ff, coin]);
+
   return (
     <Flex col p={4} width="full" className="h-screen pt-8">
       <Selector />
       <Flex col grow>
-        {coin === "BTC" && !boltz && <Flex center p={2}>
-          <Text variant="caption" className="text-center">
-            <span className="text-red">
-              Bitcoin &lt;&gt; Lightning swaps are not available at the moment. For more details, please check <a href="https://boltz.exchange" className="underline" target="_blank">boltz.exchange</a>
-            </span>
-          </Text>
-        </Flex>}
-        {coin !== "BTC" && !ff && <Flex center p={2}>
-          <Text variant="caption" className="text-center">
-            <span className="text-red">
-              Non-Bitcoin &lt;&gt; Lightning swaps are not available at the moment. For more details, please check <a href="https://ff.io" className="underline" target="_blank">ff.io</a>
-            </span>
-          </Text>
-        </Flex>}
+        {coin === "BTC" && !boltz && (
+          <Flex center p={2}>
+            <Text variant="caption" className="text-center">
+              <span className="text-red">
+                Bitcoin &lt;&gt; Lightning swaps are not available at the
+                moment. For more details, please check{" "}
+                <a
+                  href="https://boltz.exchange"
+                  className="underline"
+                  target="_blank"
+                >
+                  boltz.exchange
+                </a>
+              </span>
+            </Text>
+          </Flex>
+        )}
+        {coin !== "BTC" && !ff && (
+          <Flex center p={2}>
+            <Text variant="caption" className="text-center">
+              <span className="text-red">
+                Non-Bitcoin &lt;&gt; Lightning swaps are not available at the
+                moment. For more details, please check{" "}
+                <a href="https://ff.io" className="underline" target="_blank">
+                  ff.io
+                </a>
+              </span>
+            </Text>
+          </Flex>
+        )}
         <Flex grow noBasis center col gap={2}>
           <Text variant="h1" weight="medium">
             {amount.toLocaleString()} <span className="text-grey">SATS</span>
@@ -192,7 +216,10 @@ export default function AmountScreen() {
           </Flex>
         </Flex>
       </Flex>
-      <Button onClick={handleContinue} disabled={isRateLoading || !isAmountValid}>
+      <Button
+        onClick={handleContinue}
+        disabled={!canContinue}
+      >
         Continue
       </Button>
     </Flex>

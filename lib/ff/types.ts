@@ -32,7 +32,7 @@ export interface PriceRequest {
 }
 
 export interface PriceData {
-  from: PriceDirection;
+  from: PriceDirectionBtc;
   to: PriceDirection;
   errors: Array<string>;
   ccies: Array<PriceCurrency>;
@@ -68,6 +68,10 @@ export interface PriceDirection {
   max: string;
   usd: string;
 }
+
+export type PriceDirectionBtc = PriceDirection & {
+  btc: string;
+};
 
 export interface CreateRequest {
   type: string;

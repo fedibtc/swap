@@ -2,22 +2,25 @@
 
 import { createContext, useContext, useState } from "react";
 import { Direction } from "./app-state-provider";
+import { ReverseSwapRate, ReverseSwapResponse, SubmarineSwapRate, SubmarineSwapResponse } from "@/lib/boltz/types";
+import { ECPairInterface } from "ecpair";
 
 export interface BoltzSwapFromLn {
   direction: typeof Direction.FromLightning;
-  address: string;
-  amount: number;
+  swap: ReverseSwapResponse;
+  keypair: ECPairInterface;
+  preimage: Buffer;
 }
 
 export interface BoltzSwapToLn {
   direction: typeof Direction.ToLightning;
-  invoice: string;
-  amount: number;
+  swap: SubmarineSwapResponse;
+  keypair: ECPairInterface;
 }
 
 export interface BoltzProviderValue {
-  boltzToLnRate: BoltzToLnRate;
-  boltzFromLnRate: BoltzFromLnRate;
+  boltzToLnRate: SubmarineSwapRate;
+  boltzFromLnRate: ReverseSwapRate;
   swap: BoltzSwapFromLn | BoltzSwapToLn | null;
   setSwap: (swap: BoltzSwapFromLn | BoltzSwapToLn | null) => void;
 }
@@ -30,8 +33,8 @@ export function BoltzProvider({
   boltzFromLnRate,
 }: {
   children: React.ReactNode;
-  boltzToLnRate: BoltzToLnRate | null;
-  boltzFromLnRate: BoltzFromLnRate | null;
+  boltzToLnRate: SubmarineSwapRate | null;
+  boltzFromLnRate: ReverseSwapRate | null;
 }) {
   const [swap, setSwap] = useState<BoltzSwapFromLn | BoltzSwapToLn | null>(
     null
@@ -57,34 +60,4 @@ export function BoltzProvider({
 
 export function useBoltz() {
   return useContext(BoltzContext);
-}
-
-export interface BoltzToLnRate {
-  hash: string;
-  rate: number;
-  limits: {
-    maximal: number;
-    minimal: number;
-    maximalZeroConf: number;
-  };
-  fees: {
-    percentage: number;
-    minerFees: number;
-  };
-}
-
-export interface BoltzFromLnRate {
-  hash: string;
-  rate: number;
-  limits: {
-    maximal: number;
-    minimal: number;
-  };
-  fees: {
-    percentage: number;
-    minerFees: {
-      claim: number;
-      lockup: number;
-    };
-  };
 }

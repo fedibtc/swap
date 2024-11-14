@@ -181,7 +181,7 @@ export default function AddressScreen() {
             )}
           </Flex>
           {webln && direction === Direction.ToLightning && (
-            <Button onClick={handleLightning}>Pay with Lightning</Button>
+            <Button onClick={handleLightning}>Create Invoice via WebLN</Button>
           )}
           <Button variant="offWhite" onClick={handlePaste}>
             Paste{" "}

@@ -1,38 +1,40 @@
 "use client";
 
-import { Direction } from "@/app/components/providers/app-state-provider";
+import {
+  Direction,
+  useAppState,
+} from "@/app/components/providers/app-state-provider";
 import Container from "@/app/components/container";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Flex from "@/app/components/ui/flex";
 import { ProgressStep } from "../status/pending/step";
 import { StatusBanner } from "@/app/components/ui/status-banner";
 import { Button, Icon, Text } from "@fedibtc/ui";
 import { BorderContainer, PayNotice } from "./pay-notice";
 import { PaidNotice } from "../status/pending/paid-notice";
-import { SubmarineSwapResponse } from "@/lib/types";
 import Image from "next/image";
 import zkpInit from "@vulpemventures/secp256k1-zkp";
 import axios from "axios";
-import { crypto, initEccLib } from "bitcoinjs-lib";
+import { crypto } from "bitcoinjs-lib";
 import bolt11 from "bolt11";
 import { Musig, SwapTreeSerializer, TaprootUtils } from "boltz-core";
 import { randomBytes } from "crypto";
-import { ECPairFactory } from "ecpair";
 import { BoltzStatus, boltzEndpoint, boltzStatusSteps } from "@/lib/constants";
-import ecc from "@bitcoinerlab/secp256k1";
 import CoinHeader from "@/app/components/coin-header";
-import { BoltzSwapToLn, useBoltz } from "@/app/components/providers/boltz-provider";
+import { useBoltz } from "@/app/components/providers/boltz-provider";
 
 export default function ToLnStatus() {
-  const [status, setStatus] = useState<BoltzStatus>("new");
-  const [order, setOrder] = useState<SubmarineSwapResponse | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
+  const [status, setStatus] = useState<BoltzStatus>("created");
   const boltz = useBoltz();
+  const { draftAmount, draftAddress } = useAppState();
 
-  if (!boltz || boltz.swap?.direction !== Direction.ToLightning)
+  if (
+    !boltz ||
+    boltz.swap?.direction !== Direction.ToLightning ||
+    !draftAmount ||
+    !draftAddress
+  )
     throw new Error("Invalid boltz swap state");
-
-  const swap = boltz.swap as BoltzSwapToLn;
 
   const determineStepStatus = (step: BoltzStatus) => {
     if (status === step) {
@@ -46,150 +48,120 @@ export default function ToLnStatus() {
     }
   };
 
+  const {
+    swap: { swap, keypair },
+  } = boltz;
+
   useEffect(() => {
-    async function startSwap() {
-      if (status !== "new") return;
+    if (!swap || !keypair) return;
 
-      initEccLib(ecc);
+    let webSocket = new WebSocket(`wss://api.boltz.exchange/v2/ws`);
 
-      const keys = ECPairFactory(ecc).makeRandom();
-
-      console.log(keys, "KEYS");
-      console.log(keys.publicKey.toString("hex"), "PUBKEY");
-      console.log(swap, "EXCHANGE ORDER");
-
-      // Create a Submarine Swap
-      const createdResponse = (
-        await axios.post(`${boltzEndpoint}/v2/swap/submarine`, {
-          invoice: swap.invoice,
-          to: "BTC",
-          from: "BTC",
-          refundPublicKey: keys.publicKey.toString("hex"),
+    webSocket.onopen = () => {
+      webSocket.send(
+        JSON.stringify({
+          op: "subscribe",
+          channel: "swap.update",
+          args: [swap.id],
         })
-      ).data;
+      );
+    };
 
-      setStatus("created");
-      setOrder(createdResponse);
+    webSocket.onclose = () => {
+      webSocket = new WebSocket(`wss://api.boltz.exchange/v2/ws`);
+    };
 
-      console.log("Created swap");
-      console.log(createdResponse);
+    webSocket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
 
-      let webSocket: WebSocket;
-
-      if (!wsRef.current) {
-        wsRef.current = new WebSocket(
-          `${boltzEndpoint.replace("https://", "wss://")}/v2/ws`
-        );
+    webSocket.onmessage = async (message) => {
+      const msg = JSON.parse(message.data);
+      if (msg.event !== "update") {
+        return;
       }
 
-      webSocket = wsRef.current;
+      console.log(message, "MESSAGE");
+      console.log(msg, "MSG");
 
-      webSocket.onopen = () => {
-        webSocket.send(
-          JSON.stringify({
-            op: "subscribe",
-            channel: "swap.update",
-            args: [createdResponse.id],
-          })
-        );
-      };
+      switch (msg.args[0].status) {
+        case "transaction.mempool":
+          setStatus("pending");
+          break;
+        // Create a partial signature to allow Boltz to do a key path spend to claim the mainchain coins
+        case "transaction.claim.pending": {
+          // Get the information request to create a partial signature
+          const claimTxDetails = (
+            await axios.get(
+              `${boltzEndpoint}/v2/swap/submarine/${swap.id}/claim`
+            )
+          ).data;
 
-      webSocket.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
-
-      webSocket.onmessage = async (message) => {
-        const msg = JSON.parse(message.data);
-        if (msg.event !== "update") {
-          return;
-        }
-
-        console.log(message, "MESSAGE");
-        console.log(msg, "MSG");
-
-        switch (msg.args[0].status) {
-          case "transaction.mempool":
-            setStatus("pending");
-            break;
-          // Create a partial signature to allow Boltz to do a key path spend to claim the mainchain coins
-          case "transaction.claim.pending": {
-            // Get the information request to create a partial signature
-            const claimTxDetails = (
-              await axios.get(
-                `${boltzEndpoint}/v2/swap/submarine/${createdResponse.id}/claim`
-              )
-            ).data;
-
-            // Verify that Boltz actually paid the invoice by comparing the preimage hash
-            // of the invoice to the SHA256 hash of the preimage from the response
-            const invoicePreimageHash = Buffer.from(
-              bolt11
-                .decode(swap.invoice)
-                .tags.find((tag) => tag.tagName === "payment_hash")!
-                .data as string,
-              "hex"
-            );
-            if (
-              !crypto
-                .sha256(Buffer.from(claimTxDetails.preimage, "hex"))
-                .equals(invoicePreimageHash)
-            ) {
-              return;
-            }
-
-            const boltzPublicKey = Buffer.from(
-              createdResponse.claimPublicKey,
-              "hex"
-            );
-
-            // Create a musig signing instance
-            const musig = new Musig(await zkpInit(), keys, randomBytes(32), [
-              boltzPublicKey,
-              keys.publicKey,
-            ]);
-            // Tweak that musig with the Taptree of the swap scripts
-            TaprootUtils.tweakMusig(
-              musig,
-              SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree)
-                .tree
-            );
-
-            // Aggregate the nonces
-            musig.aggregateNonces([
-              [boltzPublicKey, Buffer.from(claimTxDetails.pubNonce, "hex")],
-            ]);
-            // Initialize the session to sign the transaction hash from the response
-            musig.initializeSession(
-              Buffer.from(claimTxDetails.transactionHash, "hex")
-            );
-
-            // Give our public nonce and the partial signature to Boltz
-            await axios.post(
-              `${boltzEndpoint}/v2/swap/submarine/${createdResponse.id}/claim`,
-              {
-                pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
-                partialSignature: Buffer.from(musig.signPartial()).toString(
-                  "hex"
-                ),
-              }
-            );
-
-            console.log("Claimed");
-            break;
+          // Verify that Boltz actually paid the invoice by comparing the preimage hash
+          // of the invoice to the SHA256 hash of the preimage from the response
+          const invoicePreimageHash = Buffer.from(
+            bolt11
+              .decode(draftAddress)
+              .tags.find((tag) => tag.tagName === "payment_hash")!
+              .data as string,
+            "hex"
+          );
+          if (
+            !crypto
+              .sha256(Buffer.from(claimTxDetails.preimage, "hex"))
+              .equals(invoicePreimageHash)
+          ) {
+            return;
           }
 
-          case "transaction.claimed":
-            setStatus("done");
-            webSocket.close();
-            break;
-        }
-      };
-    }
+          const boltzPublicKey = Buffer.from(swap.claimPublicKey, "hex");
 
-    if (swap && status === "new") {
-      startSwap();
-    }
-  }, [swap, status]);
+          // Create a musig signing instance
+          const musig = new Musig(await zkpInit(), keypair, randomBytes(32), [
+            boltzPublicKey,
+            keypair.publicKey,
+          ]);
+          // Tweak that musig with the Taptree of the swap scripts
+          TaprootUtils.tweakMusig(
+            musig,
+            SwapTreeSerializer.deserializeSwapTree(swap.swapTree).tree
+          );
+
+          // Aggregate the nonces
+          musig.aggregateNonces([
+            [boltzPublicKey, Buffer.from(claimTxDetails.pubNonce, "hex")],
+          ]);
+          // Initialize the session to sign the transaction hash from the response
+          musig.initializeSession(
+            Buffer.from(claimTxDetails.transactionHash, "hex")
+          );
+
+          // Give our public nonce and the partial signature to Boltz
+          await axios.post(
+            `${boltzEndpoint}/v2/swap/submarine/${swap.id}/claim`,
+            {
+              pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
+              partialSignature: Buffer.from(musig.signPartial()).toString(
+                "hex"
+              ),
+            }
+          );
+
+          console.log("Claimed");
+          break;
+        }
+
+        case "transaction.claimed":
+          setStatus("done");
+          webSocket.close();
+          break;
+      }
+    };
+
+    return () => {
+      webSocket.close();
+    };
+  }, [swap, status, keypair, draftAmount, draftAddress]);
 
   return (
     <Container className="p-4">
@@ -203,9 +175,8 @@ export default function ToLnStatus() {
                 Exchange Complete
               </Text>
               <Text className="text-center">
-                Successfully swapped{" "}
-                <strong>{swap.amount} sats</strong> from Onchain
-                Bitcoin to Lightning
+                Successfully swapped <strong>{draftAmount} sats</strong> from
+                Onchain Bitcoin to Lightning
               </Text>
             </BorderContainer>
           </Flex>
@@ -225,7 +196,7 @@ export default function ToLnStatus() {
             />
             <ProgressStep status={determineStepStatus("done")} text="Done" />
           </Flex>
-          {status === "created" && order && <PayNotice order={order} />}
+          {status === "created" && swap && <PayNotice order={swap} />}
           {status === "pending" && <PaidNotice />}
         </Flex>
       )}

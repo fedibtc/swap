@@ -1,4 +1,3 @@
-import axios from "axios";
 import crypto from "crypto";
 import {
   CreateRequest,
@@ -44,9 +43,11 @@ export default class FixedFloat {
       "Content-Type": "application/json",
     };
 
-    const response = await axios.post(url, data, { headers });
-
-    return response.data;
+    return await fetch(url, {
+      method: "POST",
+      headers,
+      body: data,
+    }).then((res) => res.json());
   }
 
   public async currencies() {

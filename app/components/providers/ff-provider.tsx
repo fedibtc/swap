@@ -31,9 +31,9 @@ export function FixedFloatProvider({
       value={
         currencies
           ? {
-              swap,
-              setSwap,
-            }
+            swap,
+            setSwap,
+          }
           : null
       }
     >

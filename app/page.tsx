@@ -4,19 +4,18 @@ import { AppStateProvider } from "./components/providers/app-state-provider";
 import { fixedFloat } from "@/lib/ff";
 import Container from "./components/container";
 import { Currency } from "@/lib/ff/types";
-import { boltzEndpoint } from "@/lib/constants";
 import Content from "./content";
 import {
-  BoltzFromLnRate,
   BoltzProvider,
-  BoltzToLnRate,
 } from "./components/providers/boltz-provider";
 import { FixedFloatProvider } from "./components/providers/ff-provider";
+import { boltz } from "@/lib/boltz";
+import { ReverseSwapRate, SubmarineSwapRate } from "@/lib/boltz/types";
 
 export default async function Index() {
   let currencies: Array<Currency> | null = null;
-  let boltzToLnRate: BoltzToLnRate | null = null;
-  let boltzFromLnRate: BoltzFromLnRate | null = null;
+  let boltzToLnRate: SubmarineSwapRate | null = null;
+  let boltzFromLnRate: ReverseSwapRate | null = null;
 
   try {
     currencies = await new Promise(async (resolve, reject) => {
@@ -34,19 +33,15 @@ export default async function Index() {
   }
 
   try {
-    boltzToLnRate = (
-      await fetch(`${boltzEndpoint}/v2/swap/submarine`).then((res) =>
-        res.json()
-      )
-    ).BTC.BTC;
+    const rate = await boltz.submarineSwapRate();
+    boltzToLnRate = rate.BTC.BTC;
   } catch {
     /* no-op */
   }
 
   try {
-    boltzFromLnRate = (
-      await fetch(`${boltzEndpoint}/v2/swap/reverse`).then((res) => res.json())
-    ).BTC.BTC;
+    const rate = await boltz.reverseSwapRate();
+    boltzFromLnRate = rate.BTC.BTC;
   } catch {
     /* no-op */
   }

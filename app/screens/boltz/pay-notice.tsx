@@ -12,7 +12,7 @@ import {
   TabsTrigger,
 } from "@/app/components/ui/tabs";
 import Flex from "@/app/components/ui/flex";
-import { ReverseSwapResponse, SubmarineSwapResponse } from "@/lib/types";
+import { ReverseSwapResponse, SubmarineSwapResponse } from "@/lib/boltz/types";
 
 export function PayNotice({
   order,
