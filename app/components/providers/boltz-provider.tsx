@@ -2,7 +2,12 @@
 
 import { createContext, useContext, useState } from "react";
 import { Direction } from "./app-state-provider";
-import { ReverseSwapRate, ReverseSwapResponse, SubmarineSwapRate, SubmarineSwapResponse } from "@/lib/boltz/types";
+import {
+  ReverseSwapRate,
+  ReverseSwapResponse,
+  SubmarineSwapRate,
+  SubmarineSwapResponse,
+} from "@/lib/boltz/types";
 import { ECPairInterface } from "ecpair";
 
 export interface BoltzSwapFromLn {
@@ -37,7 +42,7 @@ export function BoltzProvider({
   boltzFromLnRate: ReverseSwapRate | null;
 }) {
   const [swap, setSwap] = useState<BoltzSwapFromLn | BoltzSwapToLn | null>(
-    null
+    null,
   );
 
   return (

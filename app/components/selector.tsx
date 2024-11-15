@@ -9,7 +9,7 @@ import { Direction, useAppState } from "./providers/app-state-provider";
 export default function Selector() {
   const { update, coin } = useAppState();
 
-  const [fromOption, setFromOption] = useState("LN");
+  const [fromOption, setFromOption] = useState("BTCLN");
   const [toOption, setToOption] = useState(coin);
   const [fromOpen, setFromOpen] = useState(false);
   const [toOpen, setToOpen] = useState(false);
@@ -23,20 +23,20 @@ export default function Selector() {
 
       let toOp = toOption;
 
-      if (value !== "LN") toOp = "LN";
+      if (value !== "BTCLN") toOp = "BTCLN";
 
-      if (value === "LN" && toOption === "LN")
-        toOp = fromOption === "LN" ? "BTC" : fromOption;
+      if (value === "BTCLN" && toOption === "BTCLN")
+        toOp = fromOption === "BTCLN" ? "BTC" : fromOption;
 
       if (toOp !== toOption) setToOption(toOp);
       setFromOption(value);
       update({
         direction:
-          value === "LN" ? Direction.FromLightning : Direction.ToLightning,
-        coin: value === "LN" ? toOp : value,
+          value === "BTCLN" ? Direction.FromLightning : Direction.ToLightning,
+        coin: value === "BTCLN" ? toOp : value,
       });
     },
-    [fromOption, toOption, update]
+    [fromOption, toOption, update],
   );
 
   const handleToChange = useCallback(
@@ -45,20 +45,20 @@ export default function Selector() {
 
       let fromOp = fromOption;
 
-      if (value !== "LN") fromOp = "LN";
+      if (value !== "BTCLN") fromOp = "BTCLN";
 
-      if (value === "LN" && fromOption === "LN")
-        fromOp = toOption === "LN" ? "BTC" : toOption;
+      if (value === "BTCLN" && fromOption === "BTCLN")
+        fromOp = toOption === "BTCLN" ? "BTC" : toOption;
 
       if (fromOp !== fromOption) setFromOption(fromOp);
       setToOption(value);
       update({
         direction:
-          value === "LN" ? Direction.ToLightning : Direction.FromLightning,
-        coin: value === "LN" ? fromOp : value,
+          value === "BTCLN" ? Direction.ToLightning : Direction.FromLightning,
+        coin: value === "BTCLN" ? fromOp : value,
       });
     },
-    [fromOption, toOption, update]
+    [fromOption, toOption, update],
   );
 
   return (
@@ -66,7 +66,6 @@ export default function Selector() {
       <Popover.Root open={fromOpen} onOpenChange={setFromOpen}>
         <SelectionTrigger
           style={{
-            background: fromCurrency?.background,
             outlineColor: fromCurrency?.color,
           }}
         >
@@ -115,7 +114,6 @@ export default function Selector() {
       <Popover.Root open={toOpen} onOpenChange={setToOpen}>
         <SelectionTrigger
           style={{
-            background: toCurrency?.background,
             outlineColor: toCurrency?.color,
           }}
         >
@@ -163,7 +161,7 @@ export default function Selector() {
 }
 
 const SelectionTrigger = styled(Popover.Trigger, {
-  base: "flex grow basis-0 gap-1 h-[48px] items-center justify-center rounded-full bg-white px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:outline data-[state=open]:outline-offset-0",
+  base: "flex grow basis-0 gap-1 h-[48px] items-center justify-center rounded-full bg-offWhite px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:outline data-[state=open]:outline-offset-0",
 });
 
 const SelectionItem = styled("button", {

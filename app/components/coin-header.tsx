@@ -1,19 +1,18 @@
 import { Icon, Text } from "@fedibtc/ui";
 import Flex from "./ui/flex";
-import { currencyStats } from "@/lib/constants";
+import { currencyStats, lightningCurrency } from "@/lib/constants";
 import { styled } from "react-tailwind-variants";
 import { Direction, useAppState } from "./providers/app-state-provider";
 
 export default function CoinHeader({ onBack }: { onBack?: () => void }) {
   const { coin, direction } = useAppState();
 
-  const lightning = currencyStats.find((c) => c.code === "LN");
   const coinCurrency = currencyStats.find((c) => c.code === coin);
 
   let fromCurrency =
-    direction === Direction.FromLightning ? lightning : coinCurrency;
+    direction === Direction.FromLightning ? lightningCurrency : coinCurrency;
   let toCurrency =
-    direction === Direction.ToLightning ? lightning : coinCurrency;
+    direction === Direction.ToLightning ? lightningCurrency : coinCurrency;
 
   return (
     <Flex col gap={2} width="full">
@@ -36,7 +35,6 @@ export default function CoinHeader({ onBack }: { onBack?: () => void }) {
       <Flex row justify="between" align="center" className="gap-3">
         <CoinItem
           style={{
-            background: fromCurrency?.background,
             outlineColor: fromCurrency?.color,
           }}
         >
@@ -53,7 +51,6 @@ export default function CoinHeader({ onBack }: { onBack?: () => void }) {
 
         <CoinItem
           style={{
-            background: toCurrency?.background,
             outlineColor: toCurrency?.color,
           }}
         >
@@ -71,5 +68,5 @@ export default function CoinHeader({ onBack }: { onBack?: () => void }) {
 }
 
 const CoinItem = styled("div", {
-  base: "flex grow basis-0 gap-1 h-[48px] items-center justify-center rounded-full bg-white px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:outline data-[state=open]:outline-offset-0",
+  base: "flex grow basis-0 gap-1 h-[48px] items-center justify-center rounded-full bg-offWhite px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:outline data-[state=open]:outline-offset-0",
 });

@@ -10,6 +10,6 @@ export function decodeInvoice(invoice: string) {
           scriptHash: 0xc4,
           validWitnessVersions: [0, 1],
         }
-      : undefined
+      : undefined,
   );
 }

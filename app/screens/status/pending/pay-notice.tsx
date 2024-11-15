@@ -5,7 +5,6 @@ import {
 import { Text, Button, Icon, useToast } from "@fedibtc/ui";
 import QRCode from "react-qr-code";
 import { styled } from "react-tailwind-variants";
-import { useOrderStatus } from "../status-provider";
 import { currencyStats } from "@/lib/constants";
 import {
   Tabs,
@@ -14,11 +13,16 @@ import {
   TabsTrigger,
 } from "@/app/components/ui/tabs";
 import Flex from "@/app/components/ui/flex";
+import { useFixedFloat } from "@/app/components/providers/ff-provider";
 
 export function PayNotice() {
   const { coin, direction, webln } = useAppState();
-  const { order } = useOrderStatus();
+  const ff = useFixedFloat();
   const toast = useToast();
+
+  if (!ff || !ff.order) throw new Error("Invalid FixedFloat state");
+
+  const { order } = ff;
 
   let invoice: null | string = null;
   let address = order.from.address;

@@ -5,7 +5,6 @@ import {
   useAppState,
 } from "@/app/components/providers/app-state-provider";
 import { useCallback, useEffect, useState } from "react";
-import { Order, StatusStateProvider } from "./status-provider";
 import { getOrder } from "@/app/actions/order-status";
 import { formatError } from "@/lib/errors";
 import Container from "@/app/components/container";
@@ -22,54 +21,28 @@ export default function Status() {
   const { direction, webln } = useAppState();
   const ff = useFixedFloat();
 
-  const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string>();
 
-  if (!ff || !ff.swap) throw new Error("Invalid FixedFloat state");
+  if (!ff || !ff.order) throw new Error("Invalid FixedFloat state");
 
-  const swap = ff.swap;
+  const { order, setOrder } = ff;
 
   const pollOrder = useCallback(async () => {
-    if (!swap || !order) return;
+    try {
+      const res = await getOrder(order.id, order.token);
 
-    const res = await getOrder(swap.id, swap.token);
-
-    if (res.success) {
-      setOrder({
-        email: res.data.email,
-        status: res.data.status,
-        from: res.data.from,
-        to: res.data.to,
-        emergency: res.data.emergency,
-      });
-    }
-  }, [swap, order]);
-
-  useEffect(() => {
-    async function retrieveOrder() {
-      if (!swap) return;
-
-      try {
-        const res = await getOrder(swap.id, swap.token);
-
-        if (!res.success) {
-          throw new Error(res.message);
-        }
-
-        setOrder({
-          email: res.data.email,
-          status: res.data.status,
-          from: res.data.from,
-          to: res.data.to,
-          emergency: res.data.emergency,
-        });
-      } catch (e) {
-        setError(formatError(e));
+      if (!res.success) {
+        throw new Error(res.message);
       }
-    }
 
-    retrieveOrder();
-  }, [swap, setOrder]);
+      setOrder({
+        ...order,
+        ...res.data,
+      });
+    } catch (e) {
+      setError(formatError(e));
+    }
+  }, [order, setOrder]);
 
   useEffect(() => {
     const interval = setInterval(pollOrder, 5000);
@@ -89,20 +62,18 @@ export default function Status() {
   }, [direction, order, webln]);
 
   return order ? (
-    <StatusStateProvider order={order}>
-      <Container className="p-4">
-        <CoinHeader />
-        {order.status === OrderStatus.EXPIRED ? (
-          <ExpiredStatus />
-        ) : order.status === OrderStatus.EMERGENCY ? (
-          <EmergencyStatusComponent />
-        ) : order.status === OrderStatus.DONE ? (
-          <DoneStatus />
-        ) : (
-          <PendingStatus />
-        )}
-      </Container>
-    </StatusStateProvider>
+    <Container className="p-4">
+      <CoinHeader />
+      {order.status === OrderStatus.EXPIRED ? (
+        <ExpiredStatus />
+      ) : order.status === OrderStatus.EMERGENCY ? (
+        <EmergencyStatusComponent />
+      ) : order.status === OrderStatus.DONE ? (
+        <DoneStatus />
+      ) : (
+        <PendingStatus />
+      )}
+    </Container>
   ) : error ? (
     <Container>
       <Text variant="h2" weight="medium">

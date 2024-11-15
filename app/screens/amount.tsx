@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Selector from "../components/selector";
 import Flex from "../components/ui/flex";
 import { Button, Text, Icon } from "@fedibtc/ui";
@@ -7,7 +7,7 @@ import {
   Direction,
   useAppState,
 } from "../components/providers/app-state-provider";
-import { getRateFromLightning, getRateToLightning } from "../actions/get-rate";
+import { getAbsoluteRate, getRateToLightning } from "../actions/rate";
 import { decodeInvoice } from "@/lib/utils";
 import { styled } from "react-tailwind-variants";
 import { useBoltz } from "../components/providers/boltz-provider";
@@ -17,36 +17,48 @@ export default function AmountScreen() {
   const { direction, coin, update, webln, draftAmount } = useAppState();
   const boltz = useBoltz();
   const ff = useFixedFloat();
+
   const [amount, setAmount] = useState(
-    draftAmount ?? boltz?.boltzFromLnRate.limits.minimal ?? 50000
+    draftAmount ?? boltz?.boltzFromLnRate.limits.minimal ?? 50000,
   );
   const [isRateLoading, setIsRateLoading] = useState(false);
   const [min, setMin] = useState(
-    boltz?.boltzFromLnRate.limits.minimal ?? 50000
+    boltz?.boltzFromLnRate.limits.minimal ?? 50000,
   );
   const [max, setMax] = useState(
-    boltz?.boltzFromLnRate.limits.maximal ?? 25000000
+    boltz?.boltzFromLnRate.limits.maximal ?? 25000000,
   );
 
-  const isAmountValid = useMemo(
-    () => amount >= min && amount <= max,
-    [amount, min, max]
+  const canContinue = useMemo(() => {
+    if (
+      (coin === "BTC" && !boltz) ||
+      (coin !== "BTC" && !ff) ||
+      isRateLoading ||
+      amount < min ||
+      amount > max
+    )
+      return false;
+
+    return true;
+  }, [min, max, amount, isRateLoading, boltz, ff, coin]);
+
+  const appendNumber = useCallback(
+    (number: number) => {
+      const total = amount * 10 + number;
+
+      if (String(total).length <= String(max).length) {
+        setAmount(total);
+      }
+    },
+    [amount, max],
   );
 
-  const appendNumber = (number: number) => {
-    const total = amount * 10 + number;
-
-    if (String(total).length <= String(max).length) {
-      setAmount(total);
-    }
-  };
-
-  const deleteLastNumber = () => {
+  const deleteLastNumber = useCallback(() => {
     setAmount(Math.floor(amount / 10));
-  };
+  }, [amount]);
 
-  const handleContinue = async () => {
-    if (!isAmountValid) return;
+  const handleContinue = useCallback(async () => {
+    if (!canContinue) return;
 
     try {
       if (direction === Direction.ToLightning && webln) {
@@ -55,14 +67,14 @@ export default function AmountScreen() {
         if (paymentRequest) {
           if (paymentRequest.startsWith("lntbs"))
             throw new Error(
-              "Invoice is for wrong network. Expected bitcoin, got testnet"
+              "Invoice is for wrong network. Expected bitcoin, got testnet",
             );
 
           const decoded = decodeInvoice(paymentRequest);
 
           if (decoded.satoshis !== amount)
             throw new Error(
-              `Invoice has wrong amount. Expected ${amount}, got ${decoded.satoshis}`
+              `Invoice has wrong amount. Expected ${amount}, got ${decoded.satoshis}`,
             );
 
           update({
@@ -80,7 +92,7 @@ export default function AmountScreen() {
         screen: AppScreen.Address,
       });
     }
-  };
+  }, [amount, direction, canContinue, update, webln]);
 
   useEffect(() => {
     async function calculateRates() {
@@ -92,13 +104,11 @@ export default function AmountScreen() {
 
           setMin(boltz.boltzFromLnRate.limits.minimal);
           setMax(boltz.boltzFromLnRate.limits.maximal);
-        } else {
-          const rate = await getRateFromLightning(coin, amount / 100000000);
+        } else if (amount > 0) {
+          const rate = await getAbsoluteRate("BTCLN", coin);
 
-          console.log(rate, "FROMLN RATE");
-
-          setMin(Number(rate.from.min) * 100000000);
-          setMax(Number(rate.from.max) * 100000000);
+          setMin(Number(rate.minamount) * 100000000);
+          setMax(Number(rate.maxamount) * 100000000);
         }
       }
 
@@ -108,13 +118,18 @@ export default function AmountScreen() {
 
           setMin(boltz.boltzToLnRate.limits.minimal);
           setMax(boltz.boltzToLnRate.limits.maximal);
-        } else {
-          const rate = await getRateToLightning(coin, amount / 100000000);
+        } else if (amount > 0) {
+          const absRate = await getAbsoluteRate(coin, "BTCLN");
+          const relRate = await getRateToLightning(coin, amount / 100000000);
 
-          console.log(rate, "TOLN RATE");
-
-          setMin(Number(rate.to.min) * 100000000);
-          setMax(Number(rate.to.max) * 100000000);
+          setMin(
+            Number((Number(relRate.from.min) * absRate.out).toFixed(7)) *
+              100000000,
+          );
+          setMax(
+            Number((Number(relRate.from.max) * absRate.out).toFixed(7)) *
+              100000000,
+          );
         }
       }
 
@@ -123,12 +138,6 @@ export default function AmountScreen() {
 
     calculateRates();
   }, [direction, coin, amount, boltz]);
-
-  const canContinue = useMemo(() => {
-    if ((coin === "BTC" && !boltz) || (coin !== "BTC" && !ff) || (isRateLoading || !isAmountValid)) return false;
-
-    return true;
-  }, [isAmountValid, isRateLoading, boltz, ff, coin]);
 
   return (
     <Flex col p={4} width="full" className="h-screen pt-8">
@@ -216,10 +225,7 @@ export default function AmountScreen() {
           </Flex>
         </Flex>
       </Flex>
-      <Button
-        onClick={handleContinue}
-        disabled={!canContinue}
-      >
+      <Button onClick={handleContinue} disabled={!canContinue}>
         Continue
       </Button>
     </Flex>

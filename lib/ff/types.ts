@@ -70,7 +70,7 @@ export interface PriceDirection {
 }
 
 export type PriceDirectionBtc = PriceDirection & {
-  btc: string;
+  btc: number;
 };
 
 export interface CreateRequest {
@@ -249,3 +249,13 @@ export interface QRData {
 }
 
 export type QRResponse = FFResponse<QRData>;
+
+export interface RateInfo {
+  from: string;
+  in: number;
+  out: number;
+  amount: number;
+  tofee: number;
+  minamount: number;
+  maxamount: number;
+}

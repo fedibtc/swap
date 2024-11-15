@@ -1,3 +1,37 @@
+export interface ClaimSubmarineSwapRequest {
+  pubNonce: string;
+  partialSignature: string;
+}
+
+export interface ClaimSubmarineSwapResponse {}
+
+export interface ClaimSubmarineSwapInfo {
+  preimage: string;
+  pubNonce: string;
+  publicKey: string;
+  transactionHash: string;
+}
+
+export interface BroadcastClaimedTransactionRequest {
+  hex: string;
+}
+
+export interface BroadcastClaimedTransactionResponse {
+  id: string;
+}
+
+export interface ClaimReverseSwapRequest {
+  preimage: string;
+  pubNonce: string;
+  transaction: string;
+  index: number;
+}
+
+export interface ClaimReverseSwapResponse {
+  pubNonce: string;
+  partialSignature: string;
+}
+
 export interface SubmarineSwapRequest {
   from: string;
   to: string;

@@ -7,8 +7,8 @@ import {
 import CoinHeader from "../components/coin-header";
 import Flex from "../components/ui/flex";
 import { Button, Text, Icon, useToast } from "@fedibtc/ui";
-import { currencyStats } from "@/lib/constants";
-import { useEffect, useMemo, useState } from "react";
+import { currencyStats, lightningCurrency } from "@/lib/constants";
+import { useCallback, useEffect, useState } from "react";
 import {
   Popover,
   PopoverContent,
@@ -17,33 +17,43 @@ import {
 } from "@radix-ui/react-popover";
 import { createOrder } from "../actions/create-order";
 import { setOrderEmail } from "../actions/set-email";
-import { useAmount } from "../hooks/amount";
 import { useBoltz } from "../components/providers/boltz-provider";
 import { useFixedFloat } from "../components/providers/ff-provider";
-import { PriceData } from "@/lib/ff/types";
-import { getRateFromLightning, getRateToLightning } from "../actions/get-rate";
+import { PriceData, RateInfo } from "@/lib/ff/types";
 import { boltz as boltzApi } from "@/lib/boltz";
 import { initEccLib, crypto } from "bitcoinjs-lib";
 import ecc from "@bitcoinerlab/secp256k1";
 import ECPairFactory from "ecpair";
 import { randomBytes } from "crypto";
+import {
+  getRateFromLightning,
+  getAbsoluteRate,
+  getRateToLightning,
+} from "../actions/rate";
+import useFees from "../hooks/fees";
+import { getOrder } from "../actions/order-status";
 
 export default function ConfirmScreen() {
   const { update, draftAmount, draftAddress, draftEmail, direction, coin } =
     useAppState();
   const boltz = useBoltz();
   const ff = useFixedFloat();
-  const { inputAmount, swapFees } = useAmount();
+
   const [hideDetails, setHideDetails] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [rate, setRate] = useState<PriceData | null>(null);
+  const [absoluteRate, setAbsoluteRate] = useState<RateInfo | null>(null);
+  const [relativeRate, setRelativeRate] = useState<PriceData | null>(null);
 
-  const lightning = currencyStats.find((c) => c.code === "LN");
+  const { totalFees } = useFees(relativeRate, absoluteRate);
+
   const coinInfo = currencyStats.find((c) => c.code === coin);
   const toast = useToast();
 
-  const handleConfirm = async () => {
-    if (!draftAmount || !draftAddress) return;
+  if (!draftAmount || !draftAddress)
+    throw new Error("Invalid confirmation state");
+
+  const handleConfirm = useCallback(async () => {
+    if (!totalFees) return;
 
     setLoading(true);
 
@@ -51,14 +61,14 @@ export default function ConfirmScreen() {
       if (coin === "BTC") {
         if (!boltz) return;
 
-        if (direction === Direction.FromLightning) {
-          initEccLib(ecc);
+        initEccLib(ecc);
+        const keypair = ECPairFactory(ecc).makeRandom();
 
-          const keypair = ECPairFactory(ecc).makeRandom();
+        if (direction === Direction.FromLightning) {
           const preimage = randomBytes(32);
 
           const swap = await boltzApi.createReverseSwap({
-            invoiceAmount: inputAmount,
+            invoiceAmount: draftAmount + totalFees,
             to: "BTC",
             from: "BTC",
             claimPublicKey: keypair.publicKey.toString("hex"),
@@ -69,16 +79,12 @@ export default function ConfirmScreen() {
             direction,
             swap,
             keypair,
-            preimage
+            preimage,
           });
           update({
             screen: AppScreen.FromLnStatus,
           });
         } else {
-          initEccLib(ecc);
-
-          const keypair = ECPairFactory(ecc).makeRandom();
-
           const swap = await boltzApi.createSubmarineSwap({
             invoice: draftAddress,
             to: "BTC",
@@ -89,20 +95,20 @@ export default function ConfirmScreen() {
           boltz.setSwap({
             direction,
             swap,
-            keypair
+            keypair,
           });
           update({
             screen: AppScreen.ToLnStatus,
           });
         }
       } else {
-        if (!ff || !rate) return;
+        if (!ff || !absoluteRate || !relativeRate) return;
 
         if (direction === Direction.FromLightning) {
           const res = await createOrder({
             fromCcy: "BTCLN",
             toCcy: coin,
-            amount: Number(rate.from.amount),
+            amount: Number(relativeRate.from.amount),
             direction: "from",
             type: "fixed",
             toAddress: draftAddress,
@@ -120,9 +126,13 @@ export default function ConfirmScreen() {
             });
           }
 
-          ff.setSwap({
-            id: res.data.id,
+          const order = await getOrder(res.data.id, res.data.token);
+
+          if (!order.success) throw new Error("Invalid order");
+
+          ff.setOrder({
             token: res.data.token,
+            ...order.data,
           });
 
           update({
@@ -152,9 +162,13 @@ export default function ConfirmScreen() {
             });
           }
 
-          ff.setSwap({
-            id: res.data.id,
+          const order = await getOrder(res.data.id, res.data.token);
+
+          if (!order.success) throw new Error("Invalid order");
+
+          ff.setOrder({
             token: res.data.token,
+            ...order.data,
           });
 
           update({
@@ -167,31 +181,59 @@ export default function ConfirmScreen() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    boltz,
+    coin,
+    direction,
+    draftAddress,
+    draftAmount,
+    draftEmail,
+    ff,
+    absoluteRate,
+    relativeRate,
+    toast,
+    totalFees,
+    update,
+  ]);
 
   useEffect(() => {
-    async function loadRate() {
-      if (coin === "BTC" || !draftAmount) {
-        setRate(null);
-
-        return;
-      }
+    async function pollRate() {
+      if (coin === "BTC" || !draftAmount) return;
 
       if (direction === Direction.FromLightning) {
-        setRate(await getRateFromLightning(coin, draftAmount / 100000000));
+        const fromLightningRate = await getRateFromLightning(
+          coin,
+          draftAmount / 100000000,
+        );
+        const rateToCoin = await getAbsoluteRate(coin, "BTCLN");
+
+        setRelativeRate(fromLightningRate);
+        setAbsoluteRate(rateToCoin);
       } else {
-        setRate(await getRateToLightning(coin, draftAmount / 100000000));
+        const toLightningRate = await getRateToLightning(
+          coin,
+          draftAmount / 100000000,
+        );
+        const rateFromCoin = await getAbsoluteRate("BTCLN", coin);
+
+        setRelativeRate(toLightningRate);
+        setAbsoluteRate(rateFromCoin);
       }
     }
 
-    loadRate();
+    let interval: NodeJS.Timeout | null = null;
+
+    if (coin !== "BTC" && draftAmount) {
+      pollRate();
+      interval = setInterval(pollRate, 5000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
   }, [coin, direction, draftAmount]);
-
-  useEffect(() => {
-    console.log(rate, "CRATE");
-  }, [rate]);
-
-  if (!draftAmount || !draftAddress) return null;
 
   return (
     <Flex col width="full" className="h-screen p-4 pt-2">
@@ -212,7 +254,10 @@ export default function ConfirmScreen() {
                 <Text weight="medium">Swap</Text>
                 <Flex gap={2} center>
                   {direction === Direction.FromLightning ? (
-                    <Text style={{ color: lightning?.color }} weight="medium">
+                    <Text
+                      style={{ color: lightningCurrency?.color }}
+                      weight="medium"
+                    >
                       Lightning
                     </Text>
                   ) : (
@@ -225,7 +270,10 @@ export default function ConfirmScreen() {
                     className="w-6 h-6 text-darkGrey"
                   />
                   {direction === Direction.ToLightning ? (
-                    <Text style={{ color: lightning?.color }} weight="medium">
+                    <Text
+                      style={{ color: lightningCurrency?.color }}
+                      weight="medium"
+                    >
                       Lightning
                     </Text>
                   ) : (
@@ -240,7 +288,16 @@ export default function ConfirmScreen() {
                 <Text weight="medium">Send to</Text>
                 <Flex gap={2} center>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={direction === Direction.FromLightning ? coinInfo?.logo : lightning?.logo} alt="Logo" width={24} height={24} />
+                  <img
+                    src={
+                      direction === Direction.FromLightning
+                        ? coinInfo?.logo
+                        : lightningCurrency?.logo
+                    }
+                    alt="Logo"
+                    width={24}
+                    height={24}
+                  />
                   <Text weight="medium">
                     {draftAddress.slice(0, 6)}...{draftAddress.slice(-6)}
                   </Text>
@@ -249,17 +306,7 @@ export default function ConfirmScreen() {
               <Divider />
               <Flex gap={4} justify="between" align="center">
                 <Text weight="medium">Fees</Text>
-                <Flex gap={2} center>
-                  <Text>
-                    {coin === "BTC"
-                      ? swapFees.toLocaleString()
-                      : +(Number(rate?.from.btc as string) * 100000000).toFixed(
-                        7
-                      ) - draftAmount}{" "}
-                    SATS
-                  </Text>
-                  <BoltzFeesIndicator rate={rate} />
-                </Flex>
+                <FeeIndicator swapRate={relativeRate} rate={absoluteRate} />
               </Flex>
               <Divider />
             </Flex>
@@ -274,7 +321,7 @@ export default function ConfirmScreen() {
             <Button
               onClick={handleConfirm}
               loading={loading}
-              disabled={coin !== "BTC" && !rate}
+              disabled={coin !== "BTC" && !absoluteRate}
             >
               Confirm Swap
             </Button>
@@ -285,53 +332,73 @@ export default function ConfirmScreen() {
   );
 }
 
-function BoltzFeesIndicator({ rate }: { rate: PriceData | null }) {
-  const { networkFees, swapFees } = useAmount();
-  const { coin, direction, draftAmount } = useAppState();
+function FeeIndicator({
+  swapRate,
+  rate,
+}: {
+  swapRate: PriceData | null;
+  rate: RateInfo | null;
+}) {
+  const { coin, direction } = useAppState();
+  const { networkFees, providerFees, totalFees } = useFees(swapRate, rate);
 
-  const ffInputAmount = useMemo(() => {
-    if (coin === "BTC" || !rate) return 0;
+  const convertFeeToCoin = useCallback(
+    (sats: number) => {
+      if (coin !== "BTC" && direction === Direction.ToLightning && rate) {
+        const convertedAmount = ((sats / 100000000) * (rate.out ?? 0)).toFixed(
+          7,
+        );
 
-    if (direction === Direction.FromLightning) {
-      return +(rate.from.amount as string) * 100000000;
-    } else {
-      return +(rate.from.btc as string) * 100000000;
-    }
-  }, [rate, direction, coin]);
+        return convertedAmount;
+      }
+
+      return sats;
+    },
+    [coin, direction, rate],
+  );
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <BoltzInfoButton>
-          <Icon
-            icon="IconInfoCircle"
-            className="w-5 h-5 shrink-0 text-darkGrey"
-          />
-        </BoltzInfoButton>
-      </PopoverTrigger>
-      <PopoverPortal>
-        <PopoverContent
-          className="rounded-lg shadow-lg p-4 flex flex-col bg-white border border-extraLightGrey gap-2"
-          side="left"
-          sideOffset={16}
-        >
-          <Text>
-            Network Fee:{" "}
-            {coin === "BTC"
-              ? networkFees.toLocaleString()
-              : Math.floor(ffInputAmount - (draftAmount as number) - ffInputAmount * 0.01)}{" "}
-            SATS
-          </Text>
-          {coin === "BTC" ? (
+    <Flex gap={2} center>
+      <Text>
+        {coin !== "BTC" && direction === Direction.ToLightning
+          ? convertFeeToCoin(totalFees) + " " + coin
+          : totalFees.toLocaleString() + " SATS"}
+      </Text>
+      <Popover>
+        <PopoverTrigger asChild>
+          <BoltzInfoButton>
+            <Icon
+              icon="IconInfoCircle"
+              className="w-5 h-5 shrink-0 text-darkGrey"
+            />{" "}
+          </BoltzInfoButton>
+        </PopoverTrigger>
+        <PopoverPortal>
+          <PopoverContent
+            className="rounded-lg shadow-lg p-4 flex flex-col bg-white border border-extraLightGrey gap-2"
+            side="left"
+            sideOffset={16}
+          >
             <Text>
-              Boltz Fee: {(swapFees - networkFees).toLocaleString()} SATS
+              Network Fee:{" "}
+              {coin !== "BTC" && direction === Direction.ToLightning
+                ? convertFeeToCoin(networkFees) + " " + coin
+                : networkFees.toLocaleString() + " SATS"}
             </Text>
-          ) : (
-            <Text>FixedFloat Fee: {Math.ceil(ffInputAmount * 0.01)} SATS</Text>
-          )}
-        </PopoverContent>
-      </PopoverPortal>
-    </Popover>
+            {coin === "BTC" ? (
+              <Text>Boltz Fee: {providerFees.toLocaleString()} SATS</Text>
+            ) : (
+              <Text>
+                FixedFloat Fee:{" "}
+                {direction === Direction.ToLightning
+                  ? convertFeeToCoin(providerFees) + " " + coin
+                  : providerFees.toLocaleString() + " SATS"}
+              </Text>
+            )}
+          </PopoverContent>
+        </PopoverPortal>
+      </Popover>
+    </Flex>
   );
 }
 

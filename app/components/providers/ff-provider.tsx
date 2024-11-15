@@ -1,20 +1,19 @@
 "use client";
 
-import { Currency } from "@/lib/ff/types";
+import { Currency, OrderData } from "@/lib/ff/types";
 import { createContext, useContext, useState } from "react";
 
-interface ExchangeData {
-  id: string;
+interface OrderWithInfo extends OrderData {
   token: string;
 }
 
 export interface FixedFloatProviderValue {
-  swap: ExchangeData | null;
-  setSwap: (swap: ExchangeData | null) => void;
+  order: OrderWithInfo | null;
+  setOrder: (order: OrderWithInfo | null) => void;
 }
 
 export const FixedFloatContext = createContext<FixedFloatProviderValue | null>(
-  null
+  null,
 );
 
 export function FixedFloatProvider({
@@ -24,16 +23,16 @@ export function FixedFloatProvider({
   children: React.ReactNode;
   currencies: Array<Currency> | null;
 }) {
-  const [swap, setSwap] = useState<ExchangeData | null>(null);
+  const [order, setOrder] = useState<OrderWithInfo | null>(null);
 
   return (
     <FixedFloatContext.Provider
       value={
         currencies
           ? {
-            swap,
-            setSwap,
-          }
+              order,
+              setOrder,
+            }
           : null
       }
     >

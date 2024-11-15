@@ -35,11 +35,7 @@ export const AppStateContext = createContext<
   | null
 >(null);
 
-export function AppStateProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const boltz = useBoltz();
   const weblnRef = useRef<WebLNProvider | null>(null);
   const [value, setValue] = useState<Omit<AppState, "webln">>({
@@ -57,7 +53,7 @@ export function AppStateProvider({
         ({
           ...v,
           ...state,
-        } as AppState)
+        }) as AppState,
     );
   };
 

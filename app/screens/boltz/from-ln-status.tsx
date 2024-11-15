@@ -14,7 +14,6 @@ import { BorderContainer, PayNotice } from "./pay-notice";
 import { PaidNotice } from "../status/pending/paid-notice";
 import Image from "next/image";
 import zkpInit from "@vulpemventures/secp256k1-zkp";
-import axios from "axios";
 import { Transaction, address, networks } from "bitcoinjs-lib";
 import {
   Musig,
@@ -25,9 +24,10 @@ import {
   detectSwap,
 } from "boltz-core";
 import { randomBytes } from "crypto";
-import { BoltzStatus, boltzEndpoint, boltzStatusSteps } from "@/lib/constants";
+import { BoltzStatus, boltzStatusSteps } from "@/lib/constants";
 import CoinHeader from "@/app/components/coin-header";
 import { useBoltz } from "@/app/components/providers/boltz-provider";
+import { boltz as boltzApi } from "@/lib/boltz";
 
 export default function FromLnStatus() {
   const [status, setStatus] = useState<BoltzStatus>("created");
@@ -69,7 +69,7 @@ export default function FromLnStatus() {
           op: "subscribe",
           channel: "swap.update",
           args: [swap.id],
-        })
+        }),
       );
     };
 
@@ -98,7 +98,7 @@ export default function FromLnStatus() {
           ]);
           const tweakedKey = TaprootUtils.tweakMusig(
             musig,
-            SwapTreeSerializer.deserializeSwapTree(swap.swapTree).tree
+            SwapTreeSerializer.deserializeSwapTree(swap.swapTree).tree,
           );
 
           // Parse the lockup transaction and find the output relevant for the swap
@@ -123,21 +123,16 @@ export default function FromLnStatus() {
           const claimTx = constructClaimTransaction(
             [input],
             address.toOutputScript(draftAddress, networks.bitcoin),
-            feeBudget
+            feeBudget,
           );
 
           // Get the partial signature from Boltz
-          const boltzSig = (
-            await axios.post(
-              `${boltzEndpoint}/v2/swap/reverse/${swap.id}/claim`,
-              {
-                index: 0,
-                transaction: claimTx.toHex(),
-                preimage: preimage.toString("hex"),
-                pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
-              }
-            )
-          ).data;
+          const boltzSig = await boltzApi.claimReverseSwap(swap.id, {
+            index: 0,
+            transaction: claimTx.toHex(),
+            preimage: preimage.toString("hex"),
+            pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
+          });
 
           // Aggregate the nonces
           musig.aggregateNonces([
@@ -150,14 +145,14 @@ export default function FromLnStatus() {
               0,
               [swapOutput.script],
               [swapOutput.value],
-              Transaction.SIGHASH_DEFAULT
-            )
+              Transaction.SIGHASH_DEFAULT,
+            ),
           );
 
           // Add the partial signature from Boltz
           musig.addPartial(
             boltzPublicKey,
-            Buffer.from(boltzSig.partialSignature, "hex")
+            Buffer.from(boltzSig.partialSignature, "hex"),
           );
 
           // Create our partial signature
@@ -167,9 +162,7 @@ export default function FromLnStatus() {
           claimTx.ins[0].witness = [musig.aggregatePartials()];
 
           // Broadcast the finalized transaction
-          await axios.post(`${boltzEndpoint}/v2/chain/BTC/transaction`, {
-            hex: claimTx.toHex(),
-          });
+          await boltzApi.broadcastClaimedTransaction(claimTx.toHex());
 
           break;
         }

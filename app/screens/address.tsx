@@ -13,13 +13,20 @@ import { decodeInvoice } from "@/lib/utils";
 import { formatError } from "@/lib/errors";
 
 export default function AddressScreen() {
-  const { draftAmount, draftAddress, draftEmail, update, webln } =
-    useAppState();
+  const {
+    draftAmount,
+    draftAddress,
+    draftEmail,
+    update,
+    webln,
+    direction,
+    coin,
+  } = useAppState();
+
   const [address, setAddress] = useState<null | string>(draftAddress);
   const [email, setEmail] = useState<string | null>(draftEmail);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
-  const { direction, coin } = useAppState();
 
   const coinInfo = currencyStats.find((c) => c.code === coin);
 
@@ -27,8 +34,10 @@ export default function AddressScreen() {
     direction === Direction.ToLightning
       ? "lnbc..."
       : coin === "BTC"
-      ? "bc1..."
-      : "0x...";
+        ? "bc1..."
+        : "0x...";
+
+  if (!draftAmount) throw new Error("Invalid address state");
 
   const checkAddressValidity = useCallback(
     (addr: string) => {
@@ -37,14 +46,14 @@ export default function AddressScreen() {
       if (direction === Direction.ToLightning) {
         if (addr.startsWith("lntbs"))
           throw new Error(
-            "Invoice is for wrong network. Expected bitcoin, got testnet"
+            "Invoice is for wrong network. Expected bitcoin, got testnet",
           );
 
         const decoded = decodeInvoice(addr);
 
         if (decoded.satoshis !== draftAmount)
           throw new Error(
-            `Invoice has wrong amount. Expected ${draftAmount}, got ${decoded.satoshis}`
+            `Invoice has wrong amount. Expected ${draftAmount}, got ${decoded.satoshis}`,
           );
       } else if (coin === "BTC") {
         if (
@@ -72,8 +81,23 @@ export default function AddressScreen() {
           throw new Error("Invalid ethereum address");
       }
     },
-    [coin, direction, draftAmount]
+    [coin, direction, draftAmount],
   );
+
+  const isAddressValid = useMemo(() => {
+    if (!address) return false;
+
+    setError(null);
+
+    try {
+      checkAddressValidity(address);
+
+      return true;
+    } catch (e) {
+      setError(formatError(e));
+      return false;
+    }
+  }, [address, checkAddressValidity]);
 
   const handleLightning = useCallback(async () => {
     if (!webln || !draftAmount) return;
@@ -94,21 +118,6 @@ export default function AddressScreen() {
     }
   }, [webln, draftAmount, checkAddressValidity, update]);
 
-  const isAddressValid = useMemo(() => {
-    if (!address) return false;
-
-    setError(null);
-
-    try {
-      checkAddressValidity(address);
-
-      return true;
-    } catch (e) {
-      setError(formatError(e));
-      return false;
-    }
-  }, [address, checkAddressValidity]);
-
   const handleContinue = useCallback(async () => {
     if (!isAddressValid) return;
 
@@ -119,7 +128,7 @@ export default function AddressScreen() {
     });
   }, [address, email, update, isAddressValid]);
 
-  const handlePaste = () => {
+  const handlePaste = useCallback(() => {
     navigator.clipboard
       .readText()
       .then((res) => {
@@ -138,9 +147,7 @@ export default function AddressScreen() {
         }
       })
       .catch(() => {});
-  };
-
-  if (!draftAmount) return null;
+  }, [checkAddressValidity, update, coin]);
 
   return (
     <Flex col width="full" className="h-screen p-4 pt-2">
@@ -228,9 +235,7 @@ export default function AddressScreen() {
                   setAddress(data);
                   setScanning(false);
                 }}
-                onError={(error) => {
-                  console.log(error);
-                }}
+                onError={console.error}
               />
             </Flex>
           </Flex>

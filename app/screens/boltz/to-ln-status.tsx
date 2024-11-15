@@ -14,14 +14,14 @@ import { BorderContainer, PayNotice } from "./pay-notice";
 import { PaidNotice } from "../status/pending/paid-notice";
 import Image from "next/image";
 import zkpInit from "@vulpemventures/secp256k1-zkp";
-import axios from "axios";
 import { crypto } from "bitcoinjs-lib";
 import bolt11 from "bolt11";
 import { Musig, SwapTreeSerializer, TaprootUtils } from "boltz-core";
 import { randomBytes } from "crypto";
-import { BoltzStatus, boltzEndpoint, boltzStatusSteps } from "@/lib/constants";
+import { BoltzStatus, boltzStatusSteps } from "@/lib/constants";
 import CoinHeader from "@/app/components/coin-header";
 import { useBoltz } from "@/app/components/providers/boltz-provider";
+import { boltz as boltzApi } from "@/lib/boltz";
 
 export default function ToLnStatus() {
   const [status, setStatus] = useState<BoltzStatus>("created");
@@ -63,7 +63,7 @@ export default function ToLnStatus() {
           op: "subscribe",
           channel: "swap.update",
           args: [swap.id],
-        })
+        }),
       );
     };
 
@@ -81,9 +81,6 @@ export default function ToLnStatus() {
         return;
       }
 
-      console.log(message, "MESSAGE");
-      console.log(msg, "MSG");
-
       switch (msg.args[0].status) {
         case "transaction.mempool":
           setStatus("pending");
@@ -91,11 +88,9 @@ export default function ToLnStatus() {
         // Create a partial signature to allow Boltz to do a key path spend to claim the mainchain coins
         case "transaction.claim.pending": {
           // Get the information request to create a partial signature
-          const claimTxDetails = (
-            await axios.get(
-              `${boltzEndpoint}/v2/swap/submarine/${swap.id}/claim`
-            )
-          ).data;
+          const claimTxDetails = await boltzApi.getClaimSubmarineSwapInfo(
+            swap.id,
+          );
 
           // Verify that Boltz actually paid the invoice by comparing the preimage hash
           // of the invoice to the SHA256 hash of the preimage from the response
@@ -104,7 +99,7 @@ export default function ToLnStatus() {
               .decode(draftAddress)
               .tags.find((tag) => tag.tagName === "payment_hash")!
               .data as string,
-            "hex"
+            "hex",
           );
           if (
             !crypto
@@ -124,7 +119,7 @@ export default function ToLnStatus() {
           // Tweak that musig with the Taptree of the swap scripts
           TaprootUtils.tweakMusig(
             musig,
-            SwapTreeSerializer.deserializeSwapTree(swap.swapTree).tree
+            SwapTreeSerializer.deserializeSwapTree(swap.swapTree).tree,
           );
 
           // Aggregate the nonces
@@ -133,21 +128,15 @@ export default function ToLnStatus() {
           ]);
           // Initialize the session to sign the transaction hash from the response
           musig.initializeSession(
-            Buffer.from(claimTxDetails.transactionHash, "hex")
+            Buffer.from(claimTxDetails.transactionHash, "hex"),
           );
 
           // Give our public nonce and the partial signature to Boltz
-          await axios.post(
-            `${boltzEndpoint}/v2/swap/submarine/${swap.id}/claim`,
-            {
-              pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
-              partialSignature: Buffer.from(musig.signPartial()).toString(
-                "hex"
-              ),
-            }
-          );
+          await boltzApi.claimSubmarineSwap(swap.id, {
+            pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
+            partialSignature: Buffer.from(musig.signPartial()).toString("hex"),
+          });
 
-          console.log("Claimed");
           break;
         }
 

@@ -5,9 +5,7 @@ import { fixedFloat } from "@/lib/ff";
 import Container from "./components/container";
 import { Currency } from "@/lib/ff/types";
 import Content from "./content";
-import {
-  BoltzProvider,
-} from "./components/providers/boltz-provider";
+import { BoltzProvider } from "./components/providers/boltz-provider";
 import { FixedFloatProvider } from "./components/providers/ff-provider";
 import { boltz } from "@/lib/boltz";
 import { ReverseSwapRate, SubmarineSwapRate } from "@/lib/boltz/types";

@@ -1,6 +1,9 @@
 "use client";
 
-import { AppScreen, useAppState } from "./components/providers/app-state-provider";
+import {
+  AppScreen,
+  useAppState,
+} from "./components/providers/app-state-provider";
 import AmountScreen from "./screens/amount";
 import FromLnStatus from "./screens/boltz/from-ln-status";
 import ToLnStatus from "./screens/boltz/to-ln-status";
