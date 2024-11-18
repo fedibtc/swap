@@ -6,6 +6,7 @@ import { PaidNotice } from "./paid-notice";
 import { StatusBanner } from "@/app/components/ui/status-banner";
 import { Icon, Text } from "@fedibtc/ui";
 import { useFixedFloat } from "@/app/components/providers/ff-provider";
+import { useCallback } from "react";
 
 const statusSteps = [
   OrderStatus.NEW,
@@ -21,15 +22,20 @@ export default function ExpiredStatus() {
 
   const { order } = ff;
 
-  const determineStepStatus = (step: OrderStatus) => {
-    if (order.status === step) {
-      return "loading";
-    } else if (statusSteps.indexOf(order.status) > statusSteps.indexOf(step)) {
-      return "success";
-    } else {
-      return "idle";
-    }
-  };
+  const determineStepStatus = useCallback(
+    (step: OrderStatus) => {
+      if (order.status === step) {
+        return "loading";
+      } else if (
+        statusSteps.indexOf(order.status) > statusSteps.indexOf(step)
+      ) {
+        return "success";
+      } else {
+        return "idle";
+      }
+    },
+    [order.status],
+  );
 
   return (
     <Flex grow col width="full">

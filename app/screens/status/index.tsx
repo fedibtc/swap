@@ -14,7 +14,7 @@ import ExpiredStatus from "./expired";
 import EmergencyStatusComponent from "./emergency";
 import PendingStatus from "./pending";
 import DoneStatus from "./done";
-import CoinHeader from "@/app/components/coin-header";
+import SwapIndicator from "@/app/components/swap-indicator";
 import { useFixedFloat } from "@/app/components/providers/ff-provider";
 
 export default function Status() {
@@ -63,7 +63,7 @@ export default function Status() {
 
   return order ? (
     <Container className="p-4">
-      <CoinHeader />
+      <SwapIndicator />
       {order.status === OrderStatus.EXPIRED ? (
         <ExpiredStatus />
       ) : order.status === OrderStatus.EMERGENCY ? (

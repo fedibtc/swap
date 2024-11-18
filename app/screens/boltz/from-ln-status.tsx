@@ -5,7 +5,7 @@ import {
   useAppState,
 } from "@/app/components/providers/app-state-provider";
 import Container from "@/app/components/container";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Flex from "@/app/components/ui/flex";
 import { ProgressStep } from "../status/pending/step";
 import { StatusBanner } from "@/app/components/ui/status-banner";
@@ -25,7 +25,7 @@ import {
 } from "boltz-core";
 import { randomBytes } from "crypto";
 import { BoltzStatus, boltzStatusSteps } from "@/lib/constants";
-import CoinHeader from "@/app/components/coin-header";
+import SwapIndicator from "@/app/components/swap-indicator";
 import { useBoltz } from "@/app/components/providers/boltz-provider";
 import { boltz as boltzApi } from "@/lib/boltz";
 
@@ -46,17 +46,20 @@ export default function FromLnStatus() {
     swap: { swap, preimage, keypair },
   } = boltz;
 
-  const determineStepStatus = (step: BoltzStatus) => {
-    if (status === step) {
-      return "loading";
-    } else if (
-      boltzStatusSteps.indexOf(status) > boltzStatusSteps.indexOf(step)
-    ) {
-      return "success";
-    } else {
-      return "idle";
-    }
-  };
+  const determineStepStatus = useCallback(
+    (step: BoltzStatus) => {
+      if (status === step) {
+        return "loading";
+      } else if (
+        boltzStatusSteps.indexOf(status) > boltzStatusSteps.indexOf(step)
+      ) {
+        return "success";
+      } else {
+        return "idle";
+      }
+    },
+    [status],
+  );
 
   useEffect(() => {
     if (!swap || !preimage || !keypair) return;
@@ -187,7 +190,7 @@ export default function FromLnStatus() {
 
   return (
     <Container className="p-4">
-      <CoinHeader />
+      <SwapIndicator />
       {status === "done" ? (
         <Flex grow col width="full">
           <Flex grow col gap={4}>

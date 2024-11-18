@@ -4,7 +4,7 @@ import { currencyStats, lightningCurrency } from "@/lib/constants";
 import { styled } from "react-tailwind-variants";
 import { Direction, useAppState } from "./providers/app-state-provider";
 
-export default function CoinHeader({ onBack }: { onBack?: () => void }) {
+export default function SwapIndicator({ onBack }: { onBack?: () => void }) {
   const { coin, direction } = useAppState();
 
   const coinCurrency = currencyStats.find((c) => c.code === coin);

@@ -5,12 +5,19 @@ import { WebLNProvider } from "webln";
 import { useBoltz } from "./boltz-provider";
 
 interface AppState {
+  /** Current screen */
   screen: AppScreen;
+  /** Amount (in SATS) to be exchanged */
   draftAmount: number | null;
+  /** Address / Invoice to receive the funds */
   draftAddress: string | null;
+  /** Email address to receive notifications about FixedFloat-based orders */
   draftEmail: string | null;
+  /** WebLN provider. If null, window.webln is nonexistent or could not be enabled */
   webln: WebLNProvider | null;
+  /** Direction of the swap */
   direction: Direction;
+  /** Coin to be exchanged */
   coin: string;
 }
 

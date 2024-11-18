@@ -5,7 +5,7 @@ import {
   useAppState,
   Direction,
 } from "../components/providers/app-state-provider";
-import CoinHeader from "../components/coin-header";
+import SwapIndicator from "../components/swap-indicator";
 import { Input, Text, Icon, Button, Dialog, Scanner } from "@fedibtc/ui";
 import { currencyStats } from "@/lib/constants";
 import { styled } from "react-tailwind-variants";
@@ -151,7 +151,7 @@ export default function AddressScreen() {
 
   return (
     <Flex col width="full" className="h-screen p-4 pt-2">
-      <CoinHeader
+      <SwapIndicator
         onBack={() => {
           update({
             screen: AppScreen.Home,

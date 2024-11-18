@@ -10,6 +10,9 @@ import {
 } from "@/lib/boltz/types";
 import { ECPairInterface } from "ecpair";
 
+/**
+ * Swap information for a boltz Reverse Swap
+ */
 export interface BoltzSwapFromLn {
   direction: typeof Direction.FromLightning;
   swap: ReverseSwapResponse;
@@ -17,6 +20,9 @@ export interface BoltzSwapFromLn {
   preimage: Buffer;
 }
 
+/**
+ * Swap information for a boltz Submarine Swap
+ */
 export interface BoltzSwapToLn {
   direction: typeof Direction.ToLightning;
   swap: SubmarineSwapResponse;

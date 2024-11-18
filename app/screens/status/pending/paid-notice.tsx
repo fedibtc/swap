@@ -8,6 +8,7 @@ import { BorderContainer } from "./pay-notice";
 
 export function PaidNotice() {
   const { coin, direction } = useAppState();
+
   return (
     <BorderContainer>
       <Text variant="h2" weight="medium">

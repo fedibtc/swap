@@ -5,7 +5,7 @@ import {
   useAppState,
 } from "@/app/components/providers/app-state-provider";
 import Container from "@/app/components/container";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Flex from "@/app/components/ui/flex";
 import { ProgressStep } from "../status/pending/step";
 import { StatusBanner } from "@/app/components/ui/status-banner";
@@ -19,7 +19,7 @@ import bolt11 from "bolt11";
 import { Musig, SwapTreeSerializer, TaprootUtils } from "boltz-core";
 import { randomBytes } from "crypto";
 import { BoltzStatus, boltzStatusSteps } from "@/lib/constants";
-import CoinHeader from "@/app/components/coin-header";
+import SwapIndicator from "@/app/components/swap-indicator";
 import { useBoltz } from "@/app/components/providers/boltz-provider";
 import { boltz as boltzApi } from "@/lib/boltz";
 
@@ -36,17 +36,20 @@ export default function ToLnStatus() {
   )
     throw new Error("Invalid boltz swap state");
 
-  const determineStepStatus = (step: BoltzStatus) => {
-    if (status === step) {
-      return "loading";
-    } else if (
-      boltzStatusSteps.indexOf(status) > boltzStatusSteps.indexOf(step)
-    ) {
-      return "success";
-    } else {
-      return "idle";
-    }
-  };
+  const determineStepStatus = useCallback(
+    (step: BoltzStatus) => {
+      if (status === step) {
+        return "loading";
+      } else if (
+        boltzStatusSteps.indexOf(status) > boltzStatusSteps.indexOf(step)
+      ) {
+        return "success";
+      } else {
+        return "idle";
+      }
+    },
+    [status],
+  );
 
   const {
     swap: { swap, keypair },
@@ -154,7 +157,7 @@ export default function ToLnStatus() {
 
   return (
     <Container className="p-4">
-      <CoinHeader />
+      <SwapIndicator />
       {status === "done" ? (
         <Flex grow col width="full">
           <Flex grow col gap={4}>

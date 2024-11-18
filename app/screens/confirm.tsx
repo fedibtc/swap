@@ -4,7 +4,7 @@ import {
   Direction,
   useAppState,
 } from "../components/providers/app-state-provider";
-import CoinHeader from "../components/coin-header";
+import SwapIndicator from "../components/swap-indicator";
 import Flex from "../components/ui/flex";
 import { Button, Text, Icon, useToast } from "@fedibtc/ui";
 import { currencyStats, lightningCurrency } from "@/lib/constants";
@@ -237,7 +237,7 @@ export default function ConfirmScreen() {
 
   return (
     <Flex col width="full" className="h-screen p-4 pt-2">
-      <CoinHeader onBack={() => update({ screen: AppScreen.Address })} />
+      <SwapIndicator onBack={() => update({ screen: AppScreen.Address })} />
 
       <Flex col grow>
         <Flex grow center col gap={2}>

@@ -13,6 +13,7 @@ import {
 } from "@/app/components/ui/tabs";
 import Flex from "@/app/components/ui/flex";
 import { ReverseSwapResponse, SubmarineSwapResponse } from "@/lib/boltz/types";
+import { useCallback } from "react";
 
 export function PayNotice({
   order,
@@ -26,13 +27,16 @@ export function PayNotice({
   let address = "bip21" in order ? order.address : order.invoice;
   let amount = "bip21" in order ? order.expectedAmount : 0;
 
-  const copyToClipboard = (text: string) => {
-    return () => {
-      navigator.clipboard.writeText(text).then(() => {
-        toast.show("Copied to clipboard");
-      });
-    };
-  };
+  const copyToClipboard = useCallback(
+    (text: string) => {
+      return () => {
+        navigator.clipboard.writeText(text).then(() => {
+          toast.show("Copied to clipboard");
+        });
+      };
+    },
+    [toast],
+  );
 
   const shouldAllowURI = invoice && direction !== Direction.FromLightning;
 
