@@ -1,9 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Flex from "../components/ui/flex";
-import {
-  AppScreen,
-  useAppState,
-  Direction,
+import { AppScreen, useAppState, Direction,
 } from "../components/providers/app-state-provider";
 import SwapIndicator from "../components/swap-indicator";
 import { Input, Text, Icon, Button, Dialog, Scanner } from "@fedibtc/ui";
@@ -27,6 +24,7 @@ export default function AddressScreen() {
   const [email, setEmail] = useState<string | null>(draftEmail);
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [isAndroidWebview, setIsAndroidWebview] = useState(false);
 
   const coinInfo = currencyStats.find((c) => c.code === coin);
 
@@ -149,6 +147,14 @@ export default function AddressScreen() {
       .catch(() => {});
   }, [checkAddressValidity, update, coin]);
 
+  useEffect(() => {
+    const ua = navigator.userAgent.toLowerCase();
+
+    if (ua.indexOf("wv") > -1 && ua.indexOf("android") > -1) {
+      setIsAndroidWebview(true);
+    }
+  }, []);
+
   return (
     <Flex col width="full" className="h-screen p-4 pt-2">
       <SwapIndicator
@@ -190,12 +196,14 @@ export default function AddressScreen() {
           {webln && direction === Direction.ToLightning && (
             <Button onClick={handleLightning}>Create Invoice via WebLN</Button>
           )}
-          <Button variant="offWhite" onClick={handlePaste}>
-            Paste{" "}
-            {direction === Direction.FromLightning
-              ? `${coinInfo?.name.split(" ")[0]} address`
-              : "Lightning invoice"}
-          </Button>
+          {!isAndroidWebview && (
+            <Button variant="offWhite" onClick={handlePaste}>
+              Paste{" "}
+              {direction === Direction.FromLightning
+                ? `${coinInfo?.name.split(" ")[0]} address`
+                : "Lightning invoice"}
+            </Button>
+          )}
         </Flex>
         {coin !== "BTC" && (
           <Flex col gap={1} asChild>
