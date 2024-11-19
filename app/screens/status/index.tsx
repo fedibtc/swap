@@ -1,71 +1,48 @@
 "use client";
 
 import {
-  AppStateFF,
   Direction,
   useAppState,
-} from "@/app/components/app-state-provider";
+} from "@/app/components/providers/app-state-provider";
 import { useCallback, useEffect, useState } from "react";
-import { Order, StatusStateProvider } from "./status-provider";
 import { getOrder } from "@/app/actions/order-status";
 import { formatError } from "@/lib/errors";
 import Container from "@/app/components/container";
-import { Icon, Text, useFediInjection } from "@fedibtc/ui";
-import SwapIndicator from "@/app/components/swap-indicator";
+import { Icon, Text } from "@fedibtc/ui";
 import { OrderStatus } from "@/lib/ff/types";
 import ExpiredStatus from "./expired";
 import EmergencyStatusComponent from "./emergency";
 import PendingStatus from "./pending";
 import DoneStatus from "./done";
+import SwapIndicator from "@/app/components/swap-indicator";
+import { useFixedFloat } from "@/app/components/providers/ff-provider";
 
 export default function Status() {
-  const { exchangeOrder, direction } = useAppState<AppStateFF>();
-  const { webln } = useFediInjection();
+  const { direction, webln } = useAppState();
+  const ff = useFixedFloat();
 
-  const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string>();
 
+  if (!ff || !ff.order) throw new Error("Invalid FixedFloat state");
+
+  const { order, setOrder } = ff;
+
   const pollOrder = useCallback(async () => {
-    if (!exchangeOrder || !order) return;
+    try {
+      const res = await getOrder(order.id, order.token);
 
-    const res = await getOrder(exchangeOrder.id, exchangeOrder.token);
-
-    if (res.success) {
-      setOrder({
-        email: res.data.email,
-        status: res.data.status,
-        from: res.data.from,
-        to: res.data.to,
-        emergency: res.data.emergency,
-      });
-    }
-  }, [exchangeOrder, order]);
-
-  useEffect(() => {
-    async function retrieveOrder() {
-      if (!exchangeOrder) return;
-
-      try {
-        const res = await getOrder(exchangeOrder.id, exchangeOrder.token);
-
-        if (!res.success) {
-          throw new Error(res.message);
-        }
-
-        setOrder({
-          email: res.data.email,
-          status: res.data.status,
-          from: res.data.from,
-          to: res.data.to,
-          emergency: res.data.emergency,
-        });
-      } catch (e) {
-        setError(formatError(e));
+      if (!res.success) {
+        throw new Error(res.message);
       }
-    }
 
-    retrieveOrder();
-  }, [exchangeOrder, setOrder]);
+      setOrder({
+        ...order,
+        ...res.data,
+      });
+    } catch (e) {
+      setError(formatError(e));
+    }
+  }, [order, setOrder]);
 
   useEffect(() => {
     const interval = setInterval(pollOrder, 5000);
@@ -77,27 +54,26 @@ export default function Status() {
     if (
       order &&
       direction === Direction.FromLightning &&
-      order.status === OrderStatus.NEW
+      order.status === OrderStatus.NEW &&
+      webln
     ) {
       webln.sendPayment(order.from.address).catch(() => {});
     }
   }, [direction, order, webln]);
 
   return order ? (
-    <StatusStateProvider order={order}>
-      <Container className="p-4">
-        <SwapIndicator />
-        {order.status === OrderStatus.EXPIRED ? (
-          <ExpiredStatus />
-        ) : order.status === OrderStatus.EMERGENCY ? (
-          <EmergencyStatusComponent />
-        ) : order.status === OrderStatus.DONE ? (
-          <DoneStatus />
-        ) : (
-          <PendingStatus />
-        )}
-      </Container>
-    </StatusStateProvider>
+    <Container className="p-4">
+      <SwapIndicator />
+      {order.status === OrderStatus.EXPIRED ? (
+        <ExpiredStatus />
+      ) : order.status === OrderStatus.EMERGENCY ? (
+        <EmergencyStatusComponent />
+      ) : order.status === OrderStatus.DONE ? (
+        <DoneStatus />
+      ) : (
+        <PendingStatus />
+      )}
+    </Container>
   ) : error ? (
     <Container>
       <Text variant="h2" weight="medium">

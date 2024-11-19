@@ -1,4 +1,3 @@
-import axios from "axios";
 import crypto from "crypto";
 import {
   CreateRequest,
@@ -12,9 +11,11 @@ import {
   PriceResponse,
   QRRequest,
   QRResponse,
+  RateInfo,
   SetEmailRequest,
   SetEmailResponse,
 } from "./types";
+import { convertXML } from "simple-xml-to-json";
 
 export default class FixedFloat {
   private apiKey: string;
@@ -44,13 +45,42 @@ export default class FixedFloat {
       "Content-Type": "application/json",
     };
 
-    const response = await axios.post(url, data, { headers });
-
-    return response.data;
+    return await fetch(url, {
+      method: "POST",
+      headers,
+      body: data,
+    }).then((res) => res.json());
   }
 
   public async currencies() {
     return this.fetch<{}, CurrencyResponse>("ccies", {});
+  }
+
+  public async absoluteRate(from: string, to: string): Promise<RateInfo> {
+    const res = await fetch("https://ff.io/rates/fixed.xml").then((res) =>
+      res.text(),
+    );
+
+    return convertXML(res)
+      .rates.children.map((item: any) =>
+        item.item.children
+          .map((c: any) => {
+            const k = Object.keys(c)[0];
+            const content = c[k].content;
+
+            const firstWord = content.split(" ")[0];
+            const numericFirstWord = Number(firstWord);
+
+            if (isNaN(numericFirstWord))
+              return {
+                [k]: firstWord,
+              };
+
+            return { [k]: numericFirstWord };
+          })
+          .reduce((a: any, b: any) => ({ ...a, ...b }), {}),
+      )
+      .find((item: any) => item.from === from && item.to === to);
   }
 
   public async price(body: PriceRequest) {

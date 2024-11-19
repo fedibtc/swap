@@ -1,6 +1,25 @@
 import { Currency } from "./ff/types";
 
-export const currencyStats: Array<Currency & { contractAddress: string }> = [
+export interface CurrencyWithContractAddress extends Currency {
+  contractAddress: string;
+}
+
+export const lightningCurrency: CurrencyWithContractAddress = {
+  code: "BTCLN",
+  coin: "BTCLN",
+  network: "BTCLN",
+  priority: 6,
+  name: "Lightning",
+  recv: true,
+  send: true,
+  tag: "",
+  logo: "/lightning.svg",
+  color: "#9157ff",
+  contractAddress: "",
+};
+
+export const currencyStats: Array<CurrencyWithContractAddress> = [
+  lightningCurrency,
   {
     code: "BTC",
     coin: "BTC",
@@ -32,7 +51,7 @@ export const currencyStats: Array<Currency & { contractAddress: string }> = [
     coin: "USDC",
     network: "ETH",
     priority: 0,
-    name: "USD Coin (ERC20)",
+    name: "USDC",
     recv: true,
     send: true,
     tag: "",
@@ -45,7 +64,7 @@ export const currencyStats: Array<Currency & { contractAddress: string }> = [
     coin: "USDT",
     network: "ETH",
     priority: 4,
-    name: "Tether (ERC20)",
+    name: "USDT",
     recv: true,
     send: false,
     tag: "",
@@ -58,7 +77,7 @@ export const currencyStats: Array<Currency & { contractAddress: string }> = [
     coin: "USDT",
     network: "TRX",
     priority: 4,
-    name: "Tether (TRC20)",
+    name: "USDTTRC",
     recv: true,
     send: true,
     tag: "",
@@ -68,9 +87,6 @@ export const currencyStats: Array<Currency & { contractAddress: string }> = [
   },
 ];
 
-export const minAmountSats = 50000;
-export const maxAmountSats = 25_000_000;
-export const boltzEndpoint = "https://api.boltz.exchange";
 export const boltzStatusSteps = ["new", "created", "pending", "done"];
 
 export type BoltzStatus = (typeof boltzStatusSteps)[number];

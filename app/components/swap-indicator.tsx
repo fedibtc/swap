@@ -1,85 +1,72 @@
 import { Icon, Text } from "@fedibtc/ui";
-import { Direction, useAppState } from "./app-state-provider";
 import Flex from "./ui/flex";
+import { currencyStats, lightningCurrency } from "@/lib/constants";
 import { styled } from "react-tailwind-variants";
-import { currencyStats } from "@/lib/constants";
+import { Direction, useAppState } from "./providers/app-state-provider";
 
-export default function SwapIndicator() {
-  const { direction } = useAppState();
+export default function SwapIndicator({ onBack }: { onBack?: () => void }) {
+  const { coin, direction } = useAppState();
+
+  const coinCurrency = currencyStats.find((c) => c.code === coin);
+
+  let fromCurrency =
+    direction === Direction.FromLightning ? lightningCurrency : coinCurrency;
+  let toCurrency =
+    direction === Direction.ToLightning ? lightningCurrency : coinCurrency;
 
   return (
-    <Flex
-      row
-      gap={2}
-      align="center"
-      width="full"
-      style={{
-        flexDirection:
-          direction === Direction.FromLightning ? "row" : "row-reverse",
-      }}
-    >
-      <LightningIndicator />
-      <SwitchIcon>
-        <Icon icon="IconArrowRight" className="h-4 w-4 shrink-0" />
-      </SwitchIcon>
-      <CoinIndicator />
+    <Flex col gap={2} width="full">
+      {onBack && (
+        <Flex row className="h-4 overflow-hidden">
+          <Flex
+            row
+            gap={2}
+            align="end"
+            className="text-grey border-solid border-0 border-b border-grey hover:border-darkGrey hover:text-darkGrey cursor-pointer"
+            asChild
+          >
+            <button onClick={onBack}>
+              <Icon icon="IconArrowLeft" className="h-4 w-4" />
+              <Text variant="caption">Back</Text>
+            </button>
+          </Flex>
+        </Flex>
+      )}
+      <Flex row justify="between" align="center" className="gap-3">
+        <CoinItem
+          style={{
+            outlineColor: fromCurrency?.color,
+          }}
+        >
+          <Flex row gap={2} align="center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={fromCurrency?.logo} alt="Icon" className="w-6 h-6" />
+            <Text className="whitespace-nowrap overflow-hidden" weight="medium">
+              {fromCurrency?.name}
+            </Text>
+          </Flex>
+        </CoinItem>
+
+        <Icon icon="IconArrowRight" className="h-4 w-4" />
+
+        <CoinItem
+          style={{
+            outlineColor: toCurrency?.color,
+          }}
+        >
+          <Flex row gap={2} align="center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={toCurrency?.logo} alt="Icon" className="w-6 h-6" />
+            <Text className="whitespace-nowrap overflow-hidden" weight="medium">
+              {toCurrency?.name}
+            </Text>
+          </Flex>
+        </CoinItem>
+      </Flex>
     </Flex>
   );
 }
 
-function LightningIndicator() {
-  const lightning = currencyStats.find((c) => c.code === "BTCLN");
-
-  return (
-    <IndicatorOuter
-      style={{
-        borderColor: lightning?.color,
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <CoinIcon
-        src={lightning?.logo}
-        alt="Icon"
-        style={{
-          borderColor: lightning?.color,
-        }}
-      />
-      <Text variant="caption">Lightning ⚡</Text>
-    </IndicatorOuter>
-  );
-}
-
-function CoinIndicator() {
-  const { coin } = useAppState();
-
-  const currentCoin = currencyStats.find((c) => c.code === coin);
-
-  return (
-    <IndicatorOuter
-      style={{
-        borderColor: currentCoin?.color,
-      }}
-    >
-      <CoinIcon
-        src={currentCoin?.logo}
-        alt="Icon"
-        style={{
-          borderColor: currentCoin?.color,
-        }}
-      />
-      <Text variant="caption">{currentCoin?.name}</Text>
-    </IndicatorOuter>
-  );
-}
-
-export const IndicatorOuter = styled(Flex, {
-  base: "flex grow basis-0 width-full gap-2 align-center p-2 rounded-lg border-2 border-solid px-md py-sm disabled:pointer-events-none",
-});
-
-export const CoinIcon = styled("img", {
-  base: "h-4 w-4 rounded-full border-2",
-});
-
-const SwitchIcon = styled("div", {
-  base: "flex rounded-lg p-2 items-center justify-center transition-colors disabled:pointer-events-none",
+const CoinItem = styled("div", {
+  base: "flex grow basis-0 gap-1 h-[48px] items-center justify-center rounded-full bg-offWhite px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:outline data-[state=open]:outline-offset-0",
 });

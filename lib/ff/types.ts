@@ -32,7 +32,7 @@ export interface PriceRequest {
 }
 
 export interface PriceData {
-  from: PriceDirection;
+  from: PriceDirectionBtc;
   to: PriceDirection;
   errors: Array<string>;
   ccies: Array<PriceCurrency>;
@@ -68,6 +68,10 @@ export interface PriceDirection {
   max: string;
   usd: string;
 }
+
+export type PriceDirectionBtc = PriceDirection & {
+  btc: number;
+};
 
 export interface CreateRequest {
   type: string;
@@ -245,3 +249,13 @@ export interface QRData {
 }
 
 export type QRResponse = FFResponse<QRData>;
+
+export interface RateInfo {
+  from: string;
+  in: number;
+  out: number;
+  amount: number;
+  tofee: number;
+  minamount: number;
+  maxamount: number;
+}

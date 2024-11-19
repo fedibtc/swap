@@ -11,6 +11,9 @@ export async function getOrder(
   { success: false; message: string } | { success: true; data: OrderData }
 > {
   try {
+    if (typeof id !== "string") throw new Error("Invalid id");
+    if (typeof token !== "string") throw new Error("Invalid token");
+
     const res = await fixedFloat.order({
       id,
       token,

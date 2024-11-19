@@ -17,8 +17,11 @@ const createRequestSchema = z.object({
   afftax: z.number().optional(),
 });
 
+/**
+ * Create a new FixedFloat exchange order
+ */
 export async function createOrder(
-  args: CreateRequest
+  args: CreateRequest,
 ): Promise<
   { success: true; data: CreateData } | { success: false; message: string }
 > {

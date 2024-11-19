@@ -1,11 +1,12 @@
 import Flex from "@/app/components/ui/flex";
 import { ProgressStep } from "./step";
-import { useOrderStatus } from "../status-provider";
 import { OrderStatus } from "@/lib/ff/types";
 import { PayNotice } from "./pay-notice";
 import { PaidNotice } from "./paid-notice";
 import { StatusBanner } from "@/app/components/ui/status-banner";
 import { Icon, Text } from "@fedibtc/ui";
+import { useFixedFloat } from "@/app/components/providers/ff-provider";
+import { useCallback } from "react";
 
 const statusSteps = [
   OrderStatus.NEW,
@@ -15,17 +16,26 @@ const statusSteps = [
 ];
 
 export default function ExpiredStatus() {
-  const { order } = useOrderStatus();
+  const ff = useFixedFloat();
 
-  const determineStepStatus = (step: OrderStatus) => {
-    if (order.status === step) {
-      return "loading";
-    } else if (statusSteps.indexOf(order.status) > statusSteps.indexOf(step)) {
-      return "success";
-    } else {
-      return "idle";
-    }
-  };
+  if (!ff || !ff.order) throw new Error("Invalid FixedFloat state");
+
+  const { order } = ff;
+
+  const determineStepStatus = useCallback(
+    (step: OrderStatus) => {
+      if (order.status === step) {
+        return "loading";
+      } else if (
+        statusSteps.indexOf(order.status) > statusSteps.indexOf(step)
+      ) {
+        return "success";
+      } else {
+        return "idle";
+      }
+    },
+    [order.status],
+  );
 
   return (
     <Flex grow col width="full">

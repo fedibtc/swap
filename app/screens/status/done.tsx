@@ -3,22 +3,26 @@
 import { Button, Text } from "@fedibtc/ui";
 import Image from "next/image";
 import {
-  AppStateFF,
   Direction,
   useAppState,
-} from "@/app/components/app-state-provider";
+} from "@/app/components/providers/app-state-provider";
 import Flex from "@/app/components/ui/flex";
-import { BorderContainer } from "../pending/pay-notice";
-import { useOrderStatus } from "../status-provider";
+import { BorderContainer } from "./pending/pay-notice";
+import { useFixedFloat } from "@/app/components/providers/ff-provider";
 
 export default function DoneStatus() {
-  const { direction, coin } = useAppState<AppStateFF>();
-  const { order } = useOrderStatus();
+  const { direction, coin } = useAppState();
+  const ff = useFixedFloat();
+
+  if (!ff || !ff.order) throw new Error("Invalid FixedFloat state");
+
+  const { order } = ff;
 
   const from =
     direction === Direction.FromLightning
       ? `${Math.round(Number(order.from.amount) * 100000000)} SATS`
       : `${Number(order.from.amount)} ${coin}`;
+
   const to =
     direction === Direction.ToLightning
       ? `${Math.round(Number(order.to.amount) * 100000000)} SATS`

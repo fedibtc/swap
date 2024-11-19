@@ -1,12 +1,10 @@
 import {
-  AppStateFF,
   Direction,
   useAppState,
-} from "@/app/components/app-state-provider";
-import { Text, Button, Icon, useFediInjection, useToast } from "@fedibtc/ui";
+} from "@/app/components/providers/app-state-provider";
+import { Text, Button, Icon, useToast } from "@fedibtc/ui";
 import QRCode from "react-qr-code";
 import { styled } from "react-tailwind-variants";
-import { useOrderStatus } from "../status-provider";
 import { currencyStats } from "@/lib/constants";
 import {
   Tabs,
@@ -15,12 +13,16 @@ import {
   TabsTrigger,
 } from "@/app/components/ui/tabs";
 import Flex from "@/app/components/ui/flex";
+import { useFixedFloat } from "@/app/components/providers/ff-provider";
 
 export function PayNotice() {
-  const { coin, direction } = useAppState<AppStateFF>();
-  const { order } = useOrderStatus();
-  const { webln } = useFediInjection();
+  const { coin, direction, webln } = useAppState();
+  const ff = useFixedFloat();
   const toast = useToast();
+
+  if (!ff || !ff.order) throw new Error("Invalid FixedFloat state");
+
+  const { order } = ff;
 
   let invoice: null | string = null;
   let address = order.from.address;
@@ -109,9 +111,13 @@ export function PayNotice() {
               </Text>
               <Icon icon="IconCopy" className="w-4 h-4 shrink-0" />
             </CopyButton>
-            {direction === Direction.FromLightning && (
+            {direction === Direction.FromLightning && webln && (
               <Button
-                onClick={() => webln.sendPayment(address).catch(() => {})}
+                onClick={() => {
+                  if (webln) {
+                    webln.sendPayment(address).catch(() => {});
+                  }
+                }}
                 width="full"
               >
                 Pay with Lightning

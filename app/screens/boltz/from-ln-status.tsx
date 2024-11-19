@@ -1,29 +1,20 @@
 "use client";
 
 import {
-  AppStateBoltzFromLn,
+  Direction,
   useAppState,
-} from "@/app/components/app-state-provider";
+} from "@/app/components/providers/app-state-provider";
 import Container from "@/app/components/container";
-import SwapIndicator from "@/app/components/swap-indicator";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Flex from "@/app/components/ui/flex";
 import { ProgressStep } from "../status/pending/step";
 import { StatusBanner } from "@/app/components/ui/status-banner";
-import { Button, Icon, Text, useFediInjection } from "@fedibtc/ui";
+import { Button, Icon, Text } from "@fedibtc/ui";
 import { BorderContainer, PayNotice } from "./pay-notice";
 import { PaidNotice } from "../status/pending/paid-notice";
-import { ReverseSwapResponse } from "@/lib/types";
 import Image from "next/image";
 import zkpInit from "@vulpemventures/secp256k1-zkp";
-import axios from "axios";
-import {
-  Transaction,
-  address,
-  crypto,
-  initEccLib,
-  networks,
-} from "bitcoinjs-lib";
+import { Transaction, address, networks } from "bitcoinjs-lib";
 import {
   Musig,
   OutputType,
@@ -31,220 +22,173 @@ import {
   TaprootUtils,
   constructClaimTransaction,
   detectSwap,
-  targetFee,
 } from "boltz-core";
 import { randomBytes } from "crypto";
-import { ECPairFactory } from "ecpair";
-import ecc from "@bitcoinerlab/secp256k1";
-import { BoltzStatus, boltzEndpoint, boltzStatusSteps } from "@/lib/constants";
+import { BoltzStatus, boltzStatusSteps } from "@/lib/constants";
+import SwapIndicator from "@/app/components/swap-indicator";
+import { useBoltz } from "@/app/components/providers/boltz-provider";
+import { boltz as boltzApi } from "@/lib/boltz";
 
 export default function FromLnStatus() {
-  const [status, setStatus] = useState<BoltzStatus>("new");
-  const [order, setOrder] = useState<ReverseSwapResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const { exchangeOrder } = useAppState<AppStateBoltzFromLn>();
-  const { webln } = useFediInjection();
+  const [status, setStatus] = useState<BoltzStatus>("created");
+  const { webln, draftAmount, draftAddress } = useAppState();
+  const boltz = useBoltz();
 
-  const determineStepStatus = (step: BoltzStatus) => {
-    if (status === step) {
-      return "loading";
-    } else if (
-      boltzStatusSteps.indexOf(status) > boltzStatusSteps.indexOf(step)
-    ) {
-      return "success";
-    } else {
-      return "idle";
-    }
-  };
+  if (
+    !boltz ||
+    boltz.swap?.direction !== Direction.FromLightning ||
+    !draftAmount ||
+    !draftAddress
+  )
+    throw new Error("Invalid boltz swap state");
+
+  const {
+    swap: { swap, preimage, keypair },
+  } = boltz;
+
+  const determineStepStatus = useCallback(
+    (step: BoltzStatus) => {
+      if (status === step) {
+        return "loading";
+      } else if (
+        boltzStatusSteps.indexOf(status) > boltzStatusSteps.indexOf(step)
+      ) {
+        return "success";
+      } else {
+        return "idle";
+      }
+    },
+    [status],
+  );
 
   useEffect(() => {
-    async function startSwap() {
-      if (!exchangeOrder || status !== "new") return;
+    if (!swap || !preimage || !keypair) return;
 
-      initEccLib(ecc);
+    let webSocket = new WebSocket(`wss://api.boltz.exchange/v2/ws`);
 
-      // Create a random preimage for the swap; has to have a length of 32 bytes
-      const preimage = randomBytes(32);
-      const keys = ECPairFactory(ecc).makeRandom();
+    webSocket.onopen = () => {
+      webSocket.send(
+        JSON.stringify({
+          op: "subscribe",
+          channel: "swap.update",
+          args: [swap.id],
+        }),
+      );
+    };
 
-      // Create a Submarine Swap
-      const createdResponse = (
-        await axios.post(`${boltzEndpoint}/v2/swap/reverse`, {
-          invoiceAmount: exchangeOrder.amount,
-          to: "BTC",
-          from: "BTC",
-          claimPublicKey: keys.publicKey.toString("hex"),
-          preimageHash: crypto.sha256(preimage).toString("hex"),
-        })
-      ).data;
+    webSocket.onclose = () => {
+      webSocket = new WebSocket(`wss://api.boltz.exchange/v2/ws`);
+    };
 
-      console.log(createdResponse);
-      console.log("Created Response");
-
-      setStatus("created");
-      setOrder(createdResponse);
-
-      let webSocket: WebSocket;
-
-      if (!wsRef.current) {
-        wsRef.current = new WebSocket(
-          `${boltzEndpoint.replace("https://", "wss://")}/v2/ws`,
-        );
+    webSocket.onmessage = async (message) => {
+      const msg = JSON.parse(message.data);
+      if (msg.event !== "update") {
+        return;
       }
 
-      webSocket = wsRef.current;
+      switch (msg.args[0].status) {
+        case "transaction.mempool": {
+          setStatus("pending");
 
-      webSocket.onopen = () => {
-        webSocket.send(
-          JSON.stringify({
-            op: "subscribe",
-            channel: "swap.update",
-            args: [createdResponse.id],
-          }),
-        );
-      };
+          const boltzPublicKey = Buffer.from(swap.refundPublicKey, "hex");
 
-      webSocket.onerror = (error) => {
-        console.error("WebSocket error:", error);
+          const secp = await zkpInit();
 
-        if (status === "new") {
-          setError("Failed to create swap");
-        } else if (status === "created") {
-          setError("Payment expired");
-        } else {
-          setError("An unknown error occurred");
-        }
+          // Create a musig signing session and tweak it with the Taptree of the swap scripts
+          const musig = new Musig(secp, keypair, randomBytes(32), [
+            boltzPublicKey,
+            keypair.publicKey,
+          ]);
+          const tweakedKey = TaprootUtils.tweakMusig(
+            musig,
+            SwapTreeSerializer.deserializeSwapTree(swap.swapTree).tree,
+          );
 
-        webSocket.close();
-      };
-
-      webSocket.onmessage = async (message) => {
-        const msg = JSON.parse(message.data);
-        if (msg.event !== "update") {
-          return;
-        }
-
-        switch (msg.args[0].status) {
-          case "transaction.mempool": {
-            setStatus("pending");
-
-            const boltzPublicKey = Buffer.from(
-              createdResponse.refundPublicKey,
-              "hex",
-            );
-
-            // Create a musig signing session and tweak it with the Taptree of the swap scripts
-            const musig = new Musig(await zkpInit(), keys, randomBytes(32), [
-              boltzPublicKey,
-              keys.publicKey,
-            ]);
-            const tweakedKey = TaprootUtils.tweakMusig(
-              musig,
-              SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree)
-                .tree,
-            );
-
-            // Parse the lockup transaction and find the output relevant for the swap
-            const lockupTx = Transaction.fromHex(msg.args[0].transaction.hex);
-            const swapOutput = detectSwap(tweakedKey, lockupTx);
-            if (swapOutput === undefined) {
-              return;
-            }
-
-            // Create a claim transaction to be signed cooperatively via a key path spend
-            const claimTx = targetFee(2, (fee) =>
-              constructClaimTransaction(
-                [
-                  {
-                    ...swapOutput,
-                    keys,
-                    preimage,
-                    cooperative: true,
-                    type: OutputType.Taproot,
-                    txHash: lockupTx.getHash(),
-                  },
-                ],
-                address.toOutputScript(exchangeOrder.address, networks.bitcoin),
-                fee,
-              ),
-            );
-
-            // Get the partial signature from Boltz
-            const boltzSig = (
-              await axios.post(
-                `${boltzEndpoint}/v2/swap/reverse/${createdResponse.id}/claim`,
-                {
-                  index: 0,
-                  transaction: claimTx.toHex(),
-                  preimage: preimage.toString("hex"),
-                  pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
-                },
-              )
-            ).data;
-
-            // Aggregate the nonces
-            musig.aggregateNonces([
-              [boltzPublicKey, Buffer.from(boltzSig.pubNonce, "hex")],
-            ]);
-
-            // Initialize the session to sign the claim transaction
-            musig.initializeSession(
-              claimTx.hashForWitnessV1(
-                0,
-                [swapOutput.script],
-                [swapOutput.value],
-                Transaction.SIGHASH_DEFAULT,
-              ),
-            );
-
-            // Add the partial signature from Boltz
-            musig.addPartial(
-              boltzPublicKey,
-              Buffer.from(boltzSig.partialSignature, "hex"),
-            );
-
-            // Create our partial signature
-            musig.signPartial();
-
-            // Witness of the input to the aggregated signature
-            claimTx.ins[0].witness = [musig.aggregatePartials()];
-
-            // Broadcast the finalized transaction
-            await axios.post(`${boltzEndpoint}/v2/chain/BTC/transaction`, {
-              hex: claimTx.toHex(),
-            });
-
-            break;
+          // Parse the lockup transaction and find the output relevant for the swap
+          const lockupTx = Transaction.fromHex(msg.args[0].transaction.hex);
+          const swapOutput = detectSwap(tweakedKey, lockupTx);
+          if (swapOutput === undefined) {
+            return;
           }
 
-          case "invoice.settled":
-            setStatus("done");
-            webSocket.close();
-            break;
-        }
-      };
-    }
+          // Create a claim transaction to be signed cooperatively via a key path spend
+          const input = {
+            ...swapOutput,
+            keys: keypair,
+            preimage,
+            cooperative: true,
+            type: OutputType.Taproot,
+            txHash: lockupTx.getHash(),
+          };
 
-    if (exchangeOrder && status === "new") {
-      startSwap();
-    }
-  }, [exchangeOrder, status]);
+          const feeBudget = Number(input.value) - draftAmount;
+
+          const claimTx = constructClaimTransaction(
+            [input],
+            address.toOutputScript(draftAddress, networks.bitcoin),
+            feeBudget,
+          );
+
+          // Get the partial signature from Boltz
+          const boltzSig = await boltzApi.claimReverseSwap(swap.id, {
+            index: 0,
+            transaction: claimTx.toHex(),
+            preimage: preimage.toString("hex"),
+            pubNonce: Buffer.from(musig.getPublicNonce()).toString("hex"),
+          });
+
+          // Aggregate the nonces
+          musig.aggregateNonces([
+            [boltzPublicKey, Buffer.from(boltzSig.pubNonce, "hex")],
+          ]);
+
+          // Initialize the session to sign the claim transaction
+          musig.initializeSession(
+            claimTx.hashForWitnessV1(
+              0,
+              [swapOutput.script],
+              [swapOutput.value],
+              Transaction.SIGHASH_DEFAULT,
+            ),
+          );
+
+          // Add the partial signature from Boltz
+          musig.addPartial(
+            boltzPublicKey,
+            Buffer.from(boltzSig.partialSignature, "hex"),
+          );
+
+          // Create our partial signature
+          musig.signPartial();
+
+          // Witness of the input to the aggregated signature
+          claimTx.ins[0].witness = [musig.aggregatePartials()];
+
+          // Broadcast the finalized transaction
+          await boltzApi.broadcastClaimedTransaction(claimTx.toHex());
+
+          break;
+        }
+
+        case "invoice.settled":
+          setStatus("done");
+          webSocket.close();
+          break;
+      }
+    };
+
+    return () => {
+      webSocket.close();
+    };
+  }, [swap, draftAmount, draftAddress, keypair, preimage]);
 
   useEffect(() => {
-    if (!order) return;
+    if (!swap || !webln) return;
 
-    webln.sendPayment(order.invoice).catch(() => {});
-  }, [order, webln]);
+    webln.sendPayment(swap.invoice).catch(() => {});
+  }, [swap, webln]);
 
-  return error ? (
-    <Container>
-      <Text variant="h2" weight="medium">
-        An Error Occurred
-      </Text>
-      <Text className="text-center">{error}</Text>
-    </Container>
-  ) : (
+  return (
     <Container className="p-4">
       <SwapIndicator />
       {status === "done" ? (
@@ -256,9 +200,8 @@ export default function FromLnStatus() {
                 Exchange Complete
               </Text>
               <Text className="text-center">
-                Successfully swapped{" "}
-                <strong>{exchangeOrder?.amount} sats</strong> from Lightning to
-                Onchain Bitcoin
+                Successfully swapped <strong>{draftAmount} sats</strong> from
+                Lightning to Onchain Bitcoin
               </Text>
             </BorderContainer>
           </Flex>
@@ -278,7 +221,7 @@ export default function FromLnStatus() {
             />
             <ProgressStep status={determineStepStatus("done")} text="Done" />
           </Flex>
-          {status === "created" && order && <PayNotice order={order} />}
+          {status === "created" && swap && <PayNotice order={swap} />}
           {status === "pending" && <PaidNotice />}
         </Flex>
       )}

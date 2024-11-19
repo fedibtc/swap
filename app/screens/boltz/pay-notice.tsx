@@ -1,10 +1,8 @@
 import {
-  AppStateBoltzFromLn,
-  AppStateBoltzToLn,
   Direction,
   useAppState,
-} from "@/app/components/app-state-provider";
-import { Text, Button, Icon, useFediInjection, useToast } from "@fedibtc/ui";
+} from "@/app/components/providers/app-state-provider";
+import { Text, Button, Icon, useToast } from "@fedibtc/ui";
 import QRCode from "react-qr-code";
 import { styled } from "react-tailwind-variants";
 import {
@@ -14,30 +12,31 @@ import {
   TabsTrigger,
 } from "@/app/components/ui/tabs";
 import Flex from "@/app/components/ui/flex";
-import { ReverseSwapResponse, SubmarineSwapResponse } from "@/lib/types";
+import { ReverseSwapResponse, SubmarineSwapResponse } from "@/lib/boltz/types";
+import { useCallback } from "react";
 
 export function PayNotice({
   order,
 }: {
   order: ReverseSwapResponse | SubmarineSwapResponse;
 }) {
-  const { coin, direction } = useAppState<
-    AppStateBoltzFromLn | AppStateBoltzToLn
-  >();
-  const { webln } = useFediInjection();
+  const { coin, direction, webln } = useAppState();
   const toast = useToast();
 
   let invoice: null | string = "bip21" in order ? order.bip21 : order.invoice;
   let address = "bip21" in order ? order.address : order.invoice;
   let amount = "bip21" in order ? order.expectedAmount : 0;
 
-  const copyToClipboard = (text: string) => {
-    return () => {
-      navigator.clipboard.writeText(text).then(() => {
-        toast.show("Copied to clipboard");
-      });
-    };
-  };
+  const copyToClipboard = useCallback(
+    (text: string) => {
+      return () => {
+        navigator.clipboard.writeText(text).then(() => {
+          toast.show("Copied to clipboard");
+        });
+      };
+    },
+    [toast],
+  );
 
   const shouldAllowURI = invoice && direction !== Direction.FromLightning;
 
@@ -102,9 +101,13 @@ export function PayNotice({
               </Text>
               <Icon icon="IconCopy" className="w-4 h-4 shrink-0" />
             </CopyButton>
-            {direction === Direction.FromLightning && (
+            {direction === Direction.FromLightning && webln && (
               <Button
-                onClick={() => webln.sendPayment(address).catch(() => {})}
+                onClick={() => {
+                  if (webln) {
+                    webln.sendPayment(address).catch(() => {});
+                  }
+                }}
                 width="full"
               >
                 Pay with Lightning
