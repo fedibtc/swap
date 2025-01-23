@@ -208,7 +208,7 @@ export default function ConfirmScreen() {
         const rateToCoin = await getAbsoluteRate(coin, "BTCLN");
 
         setRelativeRate(fromLightningRate);
-        setAbsoluteRate(rateToCoin);
+        if (rateToCoin) setAbsoluteRate(rateToCoin);
       } else {
         const toLightningRate = await getRateToLightning(
           coin,
@@ -217,7 +217,7 @@ export default function ConfirmScreen() {
         const rateFromCoin = await getAbsoluteRate("BTCLN", coin);
 
         setRelativeRate(toLightningRate);
-        setAbsoluteRate(rateFromCoin);
+        if (rateFromCoin) setAbsoluteRate(rateFromCoin);
       }
     }
 
