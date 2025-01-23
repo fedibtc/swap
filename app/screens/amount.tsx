@@ -22,6 +22,7 @@ export default function AmountScreen() {
     draftAmount ?? boltz?.boltzFromLnRate.limits.minimal ?? 50000,
   );
   const [isRateLoading, setIsRateLoading] = useState(false);
+  const [isRateUnavailable, setIsRateUnavailable] = useState(false);
   const [min, setMin] = useState(
     boltz?.boltzFromLnRate.limits.minimal ?? 50000,
   );
@@ -35,12 +36,13 @@ export default function AmountScreen() {
       (coin !== "BTC" && !ff) ||
       isRateLoading ||
       amount < min ||
-      amount > max
+      amount > max ||
+      isRateUnavailable
     )
       return false;
 
     return true;
-  }, [min, max, amount, isRateLoading, boltz, ff, coin]);
+  }, [min, max, amount, isRateLoading, boltz, ff, coin, isRateUnavailable]);
 
   const appendNumber = useCallback(
     (number: number) => {
@@ -107,6 +109,12 @@ export default function AmountScreen() {
         } else if (amount > 0) {
           const rate = await getAbsoluteRate("BTCLN", coin);
 
+          if (!rate) {
+            setIsRateUnavailable(true);
+            setIsRateLoading(false);
+            return;
+          }
+
           setMin(Number(rate.minamount) * 100000000);
           setMax(Number(rate.maxamount) * 100000000);
         }
@@ -121,6 +129,12 @@ export default function AmountScreen() {
         } else if (amount > 0) {
           const absRate = await getAbsoluteRate(coin, "BTCLN");
           const relRate = await getRateToLightning(coin, amount / 100000000);
+
+          if (!absRate) {
+            setIsRateUnavailable(true);
+            setIsRateLoading(false);
+            return;
+          }
 
           setMin(
             Number((Number(relRate.from.min) * absRate.out).toFixed(7)) *
@@ -166,6 +180,19 @@ export default function AmountScreen() {
               <span className="text-red">
                 Non-Bitcoin &lt;&gt; Lightning swaps are not available at the
                 moment. For more details, please check{" "}
+                <a href="https://ff.io" className="underline" target="_blank">
+                  ff.io
+                </a>
+              </span>
+            </Text>
+          </Flex>
+        )}
+        {isRateUnavailable && (
+          <Flex center p={2}>
+            <Text variant="caption" className="text-center">
+              <span className="text-red">
+                {coin} is currently not available for swapping. For more
+                details, please check{" "}
                 <a href="https://ff.io" className="underline" target="_blank">
                   ff.io
                 </a>

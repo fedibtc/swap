@@ -56,7 +56,10 @@ export default class FixedFloat {
     return this.fetch<{}, CurrencyResponse>("ccies", {});
   }
 
-  public async absoluteRate(from: string, to: string): Promise<RateInfo> {
+  public async absoluteRate(
+    from: string,
+    to: string,
+  ): Promise<RateInfo | undefined> {
     const res = await fetch("https://ff.io/rates/fixed.xml").then((res) =>
       res.text(),
     );

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Flex from "../components/ui/flex";
-import { AppScreen, useAppState, Direction,
+import {
+  AppScreen,
+  useAppState,
+  Direction,
 } from "../components/providers/app-state-provider";
 import SwapIndicator from "../components/swap-indicator";
 import { Input, Text, Icon, Button, Dialog, Scanner } from "@fedibtc/ui";
