@@ -30,7 +30,9 @@ export async function createOrder(
     const res = await fixedFloat.create(request);
 
     if (res.code > 0) {
-      throw new Error("FixedFloat Error: " + res.msg);
+      throw new Error(
+        "There was an error with the exchange provider: " + res.msg,
+      );
     }
 
     return { success: true, data: res.data };

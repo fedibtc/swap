@@ -33,7 +33,9 @@ export async function handleEmergency(
     const res = await fixedFloat.emergency(input);
 
     if (res.code > 0) {
-      throw new Error("FixedFloat Error: " + res.msg);
+      throw new Error(
+        "There was an error with the exchange provider: " + res.msg,
+      );
     }
 
     return { success: true, data: res.data };

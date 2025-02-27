@@ -23,7 +23,9 @@ export async function setOrderEmail(
     const res = await fixedFloat.setEmail(input);
 
     if (res.code > 0) {
-      throw new Error("FixedFloat Error: " + res.msg);
+      throw new Error(
+        "There was an error with the exchange provider: " + res.msg,
+      );
     }
 
     return { success: true };
