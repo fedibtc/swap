@@ -78,7 +78,7 @@ export function PayNotice({
           <Flex col gap={2} align="center" className="mt-2">
             {direction === Direction.FromLightning ? (
               <Text className="text-center">
-                To complete the exchange, pay the followin Lightning Invoice:
+                To complete the exchange, pay the following Lightning Invoice:
               </Text>
             ) : (
               <Text className="text-center">

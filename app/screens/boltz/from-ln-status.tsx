@@ -62,7 +62,7 @@ export default function FromLnStatus() {
   );
 
   useEffect(() => {
-    if (!swap || !preimage || !keypair) return;
+    if (!swap || !preimage || !keypair || !draftAmount || !draftAddress) return;
 
     let webSocket = new WebSocket(`wss://api.boltz.exchange/v2/ws`);
 
