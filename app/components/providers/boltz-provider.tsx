@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 import { Direction } from "./app-state-provider";
 import {
   ReverseSwapRate,
@@ -9,6 +9,7 @@ import {
   SubmarineSwapResponse,
 } from "@/lib/boltz/types";
 import { ECPairInterface } from "ecpair";
+import { boltz } from "@/lib/boltz";
 
 /**
  * Swap information for a boltz Reverse Swap
@@ -34,22 +35,44 @@ export interface BoltzProviderValue {
   boltzFromLnRate: ReverseSwapRate;
   swap: BoltzSwapFromLn | BoltzSwapToLn | null;
   setSwap: (swap: BoltzSwapFromLn | BoltzSwapToLn | null) => void;
+  refetchRates: () => Promise<{
+    boltzToLnRate: SubmarineSwapRate;
+    boltzFromLnRate: ReverseSwapRate;
+  }>;
 }
 
 export const BoltzContext = createContext<BoltzProviderValue | null>(null);
 
 export function BoltzProvider({
   children,
-  boltzToLnRate,
-  boltzFromLnRate,
+  initialBoltzToLnRate,
+  initialBoltzFromLnRate,
 }: {
   children: React.ReactNode;
-  boltzToLnRate: SubmarineSwapRate | null;
-  boltzFromLnRate: ReverseSwapRate | null;
+  initialBoltzToLnRate: SubmarineSwapRate | null;
+  initialBoltzFromLnRate: ReverseSwapRate | null;
 }) {
+  const [boltzToLnRate, setBoltzToLnRate] = useState<SubmarineSwapRate | null>(
+    initialBoltzToLnRate,
+  );
+  const [boltzFromLnRate, setBoltzFromLnRate] =
+    useState<ReverseSwapRate | null>(initialBoltzFromLnRate);
   const [swap, setSwap] = useState<BoltzSwapFromLn | BoltzSwapToLn | null>(
     null,
   );
+
+  const refetchRates = useCallback(async () => {
+    const fromLnRate = await boltz.reverseSwapRate();
+    const toLnRate = await boltz.submarineSwapRate();
+
+    setBoltzToLnRate(toLnRate.BTC.BTC);
+    setBoltzFromLnRate(fromLnRate.BTC.BTC);
+
+    return {
+      boltzToLnRate: toLnRate.BTC.BTC,
+      boltzFromLnRate: fromLnRate.BTC.BTC,
+    };
+  }, []);
 
   return (
     <BoltzContext.Provider
@@ -60,6 +83,7 @@ export function BoltzProvider({
               boltzFromLnRate,
               swap,
               setSwap,
+              refetchRates,
             }
           : null
       }
