@@ -82,6 +82,7 @@ export default function ConfirmScreen() {
             from: "BTC",
             claimPublicKey: keypair.publicKey.toString("hex"),
             preimageHash: crypto.sha256(preimage).toString("hex"),
+            pairHash: boltz.boltzFromLnRate.hash,
           });
 
           boltz.setSwap({
@@ -109,6 +110,7 @@ export default function ConfirmScreen() {
             to: "BTC",
             from: "BTC",
             refundPublicKey: keypair.publicKey.toString("hex"),
+            pairHash: boltz.boltzToLnRate.hash,
           });
 
           boltz.setSwap({
