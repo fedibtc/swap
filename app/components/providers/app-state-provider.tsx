@@ -55,6 +55,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   });
 
   const update = (state: Partial<AppState>) => {
+    if(state.screen === AppScreen.Confirmation && boltz) {
+      boltz.refetchRates()
+    }
+
     setValue(
       (v) =>
         ({

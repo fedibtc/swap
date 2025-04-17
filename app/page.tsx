@@ -48,8 +48,8 @@ export default async function Index() {
     <Container>
       <FixedFloatProvider currencies={currencies}>
         <BoltzProvider
-          boltzToLnRate={boltzToLnRate}
-          boltzFromLnRate={boltzFromLnRate}
+          initialBoltzToLnRate={boltzToLnRate}
+          initialBoltzFromLnRate={boltzFromLnRate}
         >
           <AppStateProvider>
             <Content />

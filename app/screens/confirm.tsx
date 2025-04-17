@@ -61,10 +61,19 @@ export default function ConfirmScreen() {
       if (coin === "BTC") {
         if (!boltz) return;
 
-        initEccLib(ecc);
-        const keypair = ECPairFactory(ecc).makeRandom();
+        const { boltzToLnRate, boltzFromLnRate } = await boltz.refetchRates();
 
         if (direction === Direction.FromLightning) {
+          if (boltzFromLnRate.hash !== boltz.boltzFromLnRate.hash) {
+            toast.show(
+              "Network fees have been updated. Please check the fees and try again.",
+            );
+            return;
+          }
+
+          initEccLib(ecc);
+          const keypair = ECPairFactory(ecc).makeRandom();
+
           const preimage = randomBytes(32);
 
           const swap = await boltzApi.createReverseSwap({
@@ -73,6 +82,7 @@ export default function ConfirmScreen() {
             from: "BTC",
             claimPublicKey: keypair.publicKey.toString("hex"),
             preimageHash: crypto.sha256(preimage).toString("hex"),
+            pairHash: boltz.boltzFromLnRate.hash,
           });
 
           boltz.setSwap({
@@ -85,11 +95,22 @@ export default function ConfirmScreen() {
             screen: AppScreen.FromLnStatus,
           });
         } else {
+          if (boltzToLnRate.hash !== boltz.boltzToLnRate.hash) {
+            toast.show(
+              "Network fees have been updated. Please check the fees and try again.",
+            );
+            return;
+          }
+
+          initEccLib(ecc);
+          const keypair = ECPairFactory(ecc).makeRandom();
+
           const swap = await boltzApi.createSubmarineSwap({
             invoice: draftAddress,
             to: "BTC",
             from: "BTC",
             refundPublicKey: keypair.publicKey.toString("hex"),
+            pairHash: boltz.boltzToLnRate.hash,
           });
 
           boltz.setSwap({
