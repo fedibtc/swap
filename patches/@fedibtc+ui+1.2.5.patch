@@ -1,0 +1,14 @@
+diff --git a/node_modules/@fedibtc/ui/dist/index.css b/node_modules/@fedibtc/ui/dist/index.css
+index af68dab..b8709a7 100644
+--- a/node_modules/@fedibtc/ui/dist/index.css
++++ b/node_modules/@fedibtc/ui/dist/index.css
+@@ -789,7 +789,8 @@ ul {
+ }
+ 
+ .bg-gradient-to-b {
+-  background-image: linear-gradient(to bottom, var(--tw-gradient-stops));
++  /* background-image: linear-gradient(to bottom, var(--tw-gradient-stops)); */
++  background-color: black!important;
+ }
+ 
+ .bg-holo-400 {
