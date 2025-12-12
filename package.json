@@ -25,7 +25,7 @@
     "browserify-fs": "^1.0.0",
     "crypto": "^1.0.1",
     "ecpair": "^2.1.0",
-    "next": "14.2.34",
+    "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",
     "react-qr-code": "^2.0.12",
